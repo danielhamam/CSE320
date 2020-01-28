@@ -91,6 +91,33 @@ int decompress(FILE *in, FILE *out) {
  */
 int validargs(int argc, char **argv)
 {
-    // To be implemented.
-    return -1;
+
+    if (argc > 2) { // if its more than just bin/sequitur (which is first argument)
+
+        argv++; // now we have focus on position argv[1], where argument(s) should start.
+        char* charpointer1 = *argv; // points to memory of '-' argv[1][0]
+        char char_position1 = *charpointer1; // explicit value of position argv[1]
+
+        // CHECK ARGV[1]
+        // **argv = double dereference
+        if (char_position1 == '-') { // check if there is an argument.
+
+            // check next letter after '-'
+            charpointer1++; // points to memory of argv[1][1]
+            if (*charpointer1 == 'h') {
+                return 0; // true because rest of arguments ignored. (EXIT_SUCCESS)
+            }
+            else if (*charpointer1 == 'c') {
+                argv++; // now we have focus on position argv[2] (after 1st argument.)
+
+            }
+
+
+
+            return 0; // true because validated (EXIT_SUCCESS)
+        }
+    } // end of if statement
+
+    // else:
+    return -1; // false because no arguments (EXIT_FAILURE)
 }
