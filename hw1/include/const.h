@@ -17,7 +17,7 @@
 
 #define USAGE(program_name, retcode) do { \
 fprintf(stderr, "USAGE: %s %s\n", program_name, \
-"[-h] -s|-d [-c]\n" \
+"[-h] -c|-d [-b]\n" \
 "   -h       Help: displays this help menu.\n" \
 "   -c       Compress: read bytes from standard input, output compressed data to standard output.\n" \
 "   -d       Deserialize: read compressed data from standard input, uncompress to standard output.\n" \
