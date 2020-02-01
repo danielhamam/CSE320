@@ -82,7 +82,7 @@ SYMBOL *new_rule(int v) {
  * In this case, its "nextr" and "prevr" fields are initialized to point
  * back to the rule itself, thereby creating an empty, doubly linked circular
  * list. If main_rule is not-NULL, then the rule is inserted at the end of
- * the list; i.e. between main_rule->prev and main_rule.
+ * the list; i.e. between main_rule->prevr and main_rule.
  */
 void add_rule(SYMBOL *rule) {
     // To be implemented.
