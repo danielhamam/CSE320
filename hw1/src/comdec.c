@@ -31,6 +31,25 @@
  * YOU WILL GET A ZERO!
  */
 
+// Function to convert character to char[] to int
+int atoiPositive(char* string) {
+    int temp = 0;
+    if (*string != 0) {
+        while (*string != '\0') {
+            char c = *string;
+            if (c >= '0' && c <= '9') {
+                int val = c - 48; // SUBTRACT ASCII VALUES.
+                temp = temp * 10;
+                temp = temp + val;
+            } else {
+                return -1;
+            }
+            string++;
+            }
+        }
+        return temp;
+    }
+
 /**
  * Main compression function.
  * Reads a sequence of bytes from a specified input stream, segments the
@@ -106,21 +125,42 @@ int validargs(int argc, char **argv) {
             // check next letter after '-'
             argpointer1++; // points to memory of argv[1][1]
             if (*argpointer1 == 'h') {
-                char* argpointer_future = argpointer1++;
-                char position = *argpointer_future;
 
-                if (position == 0) {
+                // Check if there's a char after -h
+                argpointer1++;
+                char* argpointer_future = argpointer1;
+                char position = *argpointer_future;
+                printf("position: %c", position);
+                if (position != 0) {
+                    printf("failed: there's a char after h");
                     return -1;
                 }
 
                 printf("h --> success");
                 global_options = 1; // first LEAST significant bit is 1
+                printf("global options = %d", global_options);
                 return 0; // true because rest of arguments ignored. (EXIT_SUCCESS)
             }
             else if (*argpointer1 == 'c') {
+
+                // Check if there's a char after -c_
+                argpointer1++;
+                char* argpointer_future = argpointer1;
+                char position = *argpointer_future;
+                printf("position: %c", position);
+                if (position != 0) {
+                    printf("failed: there's a char after c");
+                    return -1;
+                }
+
                 if (argc == 2) {
                     printf("c --> success");
-                    global_options = 2; // second LEAST significant bit is 1
+                    global_options = 0x0400;// default 1024kb block size (0x0400)
+                    global_options = global_options << 16;
+                    global_options = global_options | 2; // second LEAST significant bit is 1
+                    if (global_options == 0x4000002 ) {
+                        printf("global options = %d", global_options);
+                    }
                     return 0; // true because -c is first and only argument. (no optional)
                 }
                 argv++; // now we have focus on position argv[2] (after 1st argument.)
@@ -129,14 +169,21 @@ int validargs(int argc, char **argv) {
                 if (arg_position2 == '-') {
                     // second arg is an argument
                     argpointer2++;
-                    if (*argpointer2 == 'b') {
+                    if (*argpointer2 == 'b' && argc == 4) {
 
-                        // account for nothing after -b
+                        // Check if there's a char after -b_
+                        argpointer2++;
+                        char* argpointer_future2 = argpointer2;
+                        char position2 = *argpointer_future2;
+                        printf("position: %c", position2);
+                        if (position2 != 0) {
+                            printf("failed: there's a char after b");
+                            return -1;
+                        }
+                        // account for nothing after -b (default)
                         if (argc == 3) {
-                            global_options = 0x0400;// default 1024kb block size (0x0400)
-                            global_options = global_options << 16;
-                            printf("global options: %d", global_options);
-                            return 0; //nothing after b
+                            printf("Nothing after B error");
+                            return -1; //nothing after b
                         }
 
                         printf("checking for b");
@@ -216,16 +263,32 @@ int validargs(int argc, char **argv) {
                         }
                         // Passed checks:
                         printf("Passed all checks for b");
+                        global_options = atoiPositive(*argv);
+                        global_options =  global_options << 16;
+                        global_options = global_options | 2; // c bit is 1 (so we or it with blocksize
+                        printf("GLOBAL OPTIONS IS EQUAL TO: %d", global_options);
                         return 0;
                         } // end of if statement for b
 
-                        printf("-c -b--> success");
-                        return 0; // b is valid, so return success
+                        printf("Not correct format -> failure");
+                        return -1; // b is valid, so return success
                     }
                 }
             else if (*argpointer1 == 'd') {
+
+                // Check if there's a char after -b_
+                argpointer1++;
+                char* argpointer_future2 = argpointer1;
+                char position = *argpointer_future2;
+                printf("position: %c", position);
+                if (position != 0) {
+                    printf("failed: there's a char after d");
+                    return -1;
+                }
                 if (argc == 2) {
                     printf("d --> success");
+                    global_options = 4; // third LEAST significant bit.
+                    printf("global_options = %d", global_options);
                     return 0;
                 }
                 else {
@@ -235,5 +298,6 @@ int validargs(int argc, char **argv) {
             }
     } // end of '-' if statement
     }
-    return 0;
+    printf("Incorrect format: failure");
+    return -1;
 }
