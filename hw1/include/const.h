@@ -20,7 +20,7 @@ fprintf(stderr, "USAGE: %s %s\n", program_name, \
 "[-h] -c|-d [-b]\n" \
 "   -h       Help: displays this help menu.\n" \
 "   -c       Compress: read bytes from standard input, output compressed data to standard output.\n" \
-"   -d       Deserialize: read compressed data from standard input, uncompress to standard output.\n" \
+"   -d       Decompress: read compressed data from standard input, output raw data to standard output.\n" \
 "            Optional additional parameter for -c (not permitted with -d):\n" \
 "               -b           BLOCKSIZE is the blocksize (in Kbytes, range [1, 1024])\n" \
 "                            to be used in compression.\n"); \
