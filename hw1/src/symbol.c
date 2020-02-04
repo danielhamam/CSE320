@@ -20,6 +20,9 @@ int next_nonterminal_value = FIRST_NONTERMINAL;
  */
 void init_symbols(void) {
     // To be implemented.
+    // frees all symbols.
+    num_symbols = 0; // setting num_symbols to 0;
+    next_nonterminal_value = FIRST_NONTERMINAL; // reset to FIRST_NONTERMINAL
 }
 
 /**
@@ -47,6 +50,33 @@ void init_symbols(void) {
  */
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
     // To be implemented.
+
+    // first, check if recycled symbols is empty.
+
+    struct symbol newsymbol;
+    newsymbol.refcnt = 0; // zeroed
+    newsymbol.next = 0; // zeroed
+    newsymbol.prev = 0; // zeroed
+    newsymbol.nextr = 0; // zeroed
+    newsymbol.prevr = 0; // zeroed
+    // Checking if  terminal
+    if (value < FIRST_NONTERMINAL) {
+        // rule = NULL
+        newsymbol.rule = NULL;
+        newsymbol.value = value;
+        SYMBOL *symptr = &newsymbol;
+        return symptr;
+    }
+    else if (value >= FIRST_NONTERMINAL) {
+        // it is nonterminal
+        // rule is non-NULL
+        if (rule != NULL) {
+            newsymbol.rule = rule;
+        }
+        newsymbol.value = value;
+        SYMBOL *symptr = &newsymbol;
+        return symptr;
+    }
     return NULL;
 }
 

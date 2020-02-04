@@ -1,6 +1,7 @@
 #include "const.h"
 #include "sequitur.h"
 #include "debug.h"
+#include "stdio.h"
 
 #ifdef _STRING_H
 #error "Do not #include <string.h>. You will get a ZERO."
@@ -73,8 +74,28 @@ int atoiPositive(char* string) {
  * otherwise EOF.
  */
 int compress(FILE *in, FILE *out, int bsize) {
-    // To be implemented.
-    return EOF;
+    // in and out are file pointers
+    // FILE *opened_input = fopen(in, "r");
+
+    // if (opened_input == NULL) {
+    //     return EOF;
+    // }
+
+    // while(1) {
+
+    // // read single character at a time
+    // // char file_char = fgetc(opened_input);
+
+    // // check if terminated... end
+    // if (feof(opened_input)) {
+    //     break; // break out of infinite while loop
+    // }
+
+    // }
+
+
+
+    return EOF; // end of file
 }
 
 /**
@@ -110,7 +131,6 @@ int decompress(FILE *in, FILE *out) {
  */
 int validargs(int argc, char **argv) {
 
-    printf("count: %d",  argc);
     if (argc > 1) { // if its more than just bin/sequitur (which is first argument)
 
         argv++; // now we have focus on position argv[1], where argument(s) should start.
@@ -130,15 +150,14 @@ int validargs(int argc, char **argv) {
                 argpointer1++;
                 char* argpointer_future = argpointer1;
                 char position = *argpointer_future;
-                printf("position: %c", position);
+                // printf("position: %c", position);
                 if (position != 0) {
-                    printf("failed: there's a char after h");
+                    // printf("failed: there's a char after h");
                     return -1;
                 }
-
-                printf("h --> success");
+                // printf("h --> success");
                 global_options = 1; // first LEAST significant bit is 1
-                printf("global options = %d", global_options);
+                // printf("global options = %d", global_options);
                 return 0; // true because rest of arguments ignored. (EXIT_SUCCESS)
             }
             else if (*argpointer1 == 'c') {
@@ -147,20 +166,20 @@ int validargs(int argc, char **argv) {
                 argpointer1++;
                 char* argpointer_future = argpointer1;
                 char position = *argpointer_future;
-                printf("position: %c", position);
+                // printf("position: %c", position);
                 if (position != 0) {
-                    printf("failed: there's a char after c");
+                    // printf("failed: there's a char after c");
                     return -1;
                 }
 
                 if (argc == 2) {
-                    printf("c --> success");
+                    // printf("c --> success");
                     global_options = 0x0400;// default 1024kb block size (0x0400)
                     global_options = global_options << 16;
                     global_options = global_options | 2; // second LEAST significant bit is 1
-                    if (global_options == 0x4000002 ) {
-                        printf("global options = %d", global_options);
-                    }
+                    // if (global_options == 0x4000002 ) {
+                    //     printf("global options = %d", global_options);
+                    // }
                     return 0; // true because -c is first and only argument. (no optional)
                 }
                 argv++; // now we have focus on position argv[2] (after 1st argument.)
@@ -175,18 +194,17 @@ int validargs(int argc, char **argv) {
                         argpointer2++;
                         char* argpointer_future2 = argpointer2;
                         char position2 = *argpointer_future2;
-                        printf("position: %c", position2);
+                        // printf("position: %c", position2);
                         if (position2 != 0) {
-                            printf("failed: there's a char after b");
+                            // printf("failed: there's a char after b");
                             return -1;
                         }
                         // account for nothing after -b (default)
                         if (argc == 3) {
-                            printf("Nothing after B error");
+                            // printf("Nothing after B error");
                             return -1; //nothing after b
                         }
-
-                        printf("checking for b");
+                        // printf("checking for b");
                         // now check that after b is digit checked.
                         argv++; //now focused on 3rd argument after -b
                         char* argpointer3 = *argv;
@@ -200,13 +218,13 @@ int validargs(int argc, char **argv) {
                             if (arg_position3 == '0' || arg_position3 == '1' || arg_position3 == '2' || arg_position3 == '3' || arg_position3 == '4' || arg_position3 == '5' ||
                                 arg_position3 == '6' || arg_position3 == '7' || arg_position3 == '8' || arg_position3 == '9') {
                                 // next char (digit) in this argument
-                                printf("%c", arg_position3);
+                                // printf("%c", arg_position3);
                                 argpointer3++;
                                 arg_position3 = *argpointer3;
                                 size++;
                             }
                             else {
-                                printf("b--> failed");
+                                // printf("b--> failed");
                                 return -1; // false because digit contains letter (EXIT_FAILURE)
                             }
                         }
@@ -216,7 +234,7 @@ int validargs(int argc, char **argv) {
                         if (size == 1) {
                             char offset_value = *holderofposition;
                             if (offset_value < '1') { // comparison using ASCII
-                                printf("Failure --> b is less than 1");
+                                // printf("Failure --> b is less than 1");
                                 return -1; // EXIT_FAILURE
                             }
                         }
@@ -231,25 +249,25 @@ int validargs(int argc, char **argv) {
                                 if (size == 4) { // first digit in 4 sequence
                                     if (offset_value != '1') {
                                         // means first digit is zero, something like '0024'
-                                        printf("Success --> b is within range");
+                                        // printf("Success --> b is within range");
                                         return 0;
                                     }
                                 }
                                 if (size == 3) { // we're assuming first digit is 1
                                     if (offset_value > '0') {
-                                        printf("Failure --> b is larger than 1024");
+                                        // printf("Failure --> b is larger than 1024");
                                         return -1; // failure
                                     }
                                 }
                                 if (size == 2) { // we're assuming first digit is 1 and second is 0
                                     if (offset_value > '2') {
-                                        printf("Failure --> b is larger than 1024");
+                                        // printf("Failure --> b is larger than 1024");
                                         return -1;
                                     }
                                 }
                                 if (size == 1) {
                                     if (offset_value > '4') {
-                                        printf("Failure --> b is larger than 1024");
+                                        // printf("Failure --> b is larger than 1024");
                                         return -1;
                                     }
                                 }
@@ -258,19 +276,18 @@ int validargs(int argc, char **argv) {
                             }
                         }
                         else if (size > 4) {
-                            printf("Failure --> b is larger than 1024");
+                            // printf("Failure --> b is larger than 1024");
                             return -1;
                         }
                         // Passed checks:
-                        printf("Passed all checks for b");
+                        // printf("Passed all checks for b");
                         global_options = atoiPositive(*argv);
                         global_options =  global_options << 16;
                         global_options = global_options | 2; // c bit is 1 (so we or it with blocksize
-                        printf("GLOBAL OPTIONS IS EQUAL TO: %d", global_options);
+                        // printf("GLOBAL OPTIONS IS EQUAL TO: %d", global_options);
                         return 0;
                         } // end of if statement for b
-
-                        printf("Not correct format -> failure");
+                        // printf("Not correct format -> failure");
                         return -1; // b is valid, so return success
                     }
                 }
@@ -280,24 +297,24 @@ int validargs(int argc, char **argv) {
                 argpointer1++;
                 char* argpointer_future2 = argpointer1;
                 char position = *argpointer_future2;
-                printf("position: %c", position);
+                // printf("position: %c", position);
                 if (position != 0) {
-                    printf("failed: there's a char after d");
+                    // printf("failed: there's a char after d");
                     return -1;
                 }
                 if (argc == 2) {
-                    printf("d --> success");
+                    // printf("d --> success");
                     global_options = 4; // third LEAST significant bit.
-                    printf("global_options = %d", global_options);
+                    // printf("global_options = %d", global_options);
                     return 0;
                 }
                 else {
-                    printf("d --> failed");
+                    // printf("d --> failed");
                     return -1; // there are arguments after d.
                 }
             }
     } // end of '-' if statement
     }
-    printf("Incorrect format: failure");
+    // printf("Incorrect format: failure");
     return -1;
 }

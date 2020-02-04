@@ -51,6 +51,13 @@
  */
 void init_rules(void) {
     // To be implemented.
+    main_rule = NULL;
+    int max = 0;
+    while (max != num_symbols) {
+        *(rule_map + max) = NULL;
+        // rule_map = rule_map - max;
+        max++;
+    }
 }
 
 /**
@@ -70,6 +77,24 @@ void init_rules(void) {
  */
 SYMBOL *new_rule(int v) {
     // To be implemented.
+
+    // first symbol is nonterminal head
+    if (v < FIRST_NONTERMINAL) {
+        return NULL;
+    }
+    else {
+        // value is nonterminal
+        // DECLARE HEADER:
+        struct symbol newheadsymbol; // sentinel
+        SYMBOL *headptr = &newheadsymbol;
+        newheadsymbol.refcnt = 0;
+        newheadsymbol.value = v; // set value to parameter v
+        newheadsymbol.nextr = 0;
+        newheadsymbol.prevr = 0;
+        newheadsymbol.rule = headptr; // sentinel points back to itself
+        return headptr;
+    }
+
     return NULL;
 }
 
@@ -86,6 +111,24 @@ SYMBOL *new_rule(int v) {
  */
 void add_rule(SYMBOL *rule) {
     // To be implemented.
+    if (main_rule == NULL) {
+        // creating an empty, doubly linked circular list.
+        main_rule = rule;
+        (*main_rule).nextr = main_rule;
+        (*main_rule).prevr = main_rule;
+    }
+    else {
+        // main_rule is not NULL, insert between main_rule --> prev and main_rule
+
+        (*rule).prev = (*main_rule).prev; // new rule's prev is the NOW second to last node.
+        (*((*main_rule).prev)).next = rule; // Second to last node's next is rule
+
+        (*rule).next = main_rule; // new rule's next is head.
+        (*main_rule).prev = rule; // main rule's previous is new rule node.
+
+        // new rule is inserted at the end of the list.
+
+    }
 }
 
 /**
@@ -101,6 +144,19 @@ void add_rule(SYMBOL *rule) {
  */
 void delete_rule(SYMBOL *rule) {
     // To be implemented.
+
+    // change the connections
+    (*(*rule).prev).next = (*rule).next;
+    (*(*rule).next).prev = (*rule).prev;
+
+    if ((*rule).refcnt == 0) {
+        // rule head is recycled
+
+    }
+    else {
+        return; // no recycling is done.
+    }
+
 }
 
 /**
@@ -111,7 +167,8 @@ void delete_rule(SYMBOL *rule) {
  */
 SYMBOL *ref_rule(SYMBOL *rule) {
     // To be implemented.
-    return NULL;
+    (*rule).refcnt = (*rule).refcnt + 1;
+    return rule;
 }
 
 /**
@@ -124,4 +181,14 @@ SYMBOL *ref_rule(SYMBOL *rule) {
  */
 void unref_rule(SYMBOL *rule) {
     // To be implemented.
+    int temp;
+    temp = (*rule).refcnt;
+    temp = temp - 1;
+    if (temp < 0) {
+        // issue a message to stderr and abort.
+        fprintf(stderr, "Reference count cannot be negative!");
+        abort();
+    }
+
+    (*rule).refcnt = (*rule).refcnt - 1;
 }
