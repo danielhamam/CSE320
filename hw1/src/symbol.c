@@ -13,6 +13,10 @@
  */
 int next_nonterminal_value = FIRST_NONTERMINAL;
 
+// RECYCLED_LIST
+SYMBOL *recycled_list;
+
+
 /**
  * Initialize the symbols module.
  * Frees all symbols, setting num_symbols to 0, and resets next_nonterminal_value
@@ -51,8 +55,71 @@ void init_symbols(void) {
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
     // To be implemented.
 
-    // first, check if recycled symbols is empty.
+    // first, check if recycled symbols is empty. DONT USE PREV for recycled_symbols
+    if (((*recycled_list).next) != NULL) {
+        // its not empty (LIFO REMEMBER)
 
+        SYMBOL *temp = recycled_list; // made pointer to preserve recycled_list
+        while( (*temp).next != NULL) {
+            temp = (*temp).next;
+        }
+        // temp refers to last node in recycled_list (LIFO)
+        SYMBOL *allocated_symbol = temp; // used to satisfy the request. removed from recycling list
+        temp--; // go to previous node
+        (*temp).next = NULL; // deleted last node
+
+        (*allocated_symbol).refcnt = 0; // zeroed
+        (*allocated_symbol).next = 0; // zeroed
+        (*allocated_symbol).prev = 0; // zeroed
+        (*allocated_symbol).nextr = 0; // zeroed
+        (*allocated_symbol).prevr = 0; // zeroed
+
+        if (value < FIRST_NONTERMINAL) {
+            // rule = NULL
+            (*allocated_symbol).rule = NULL;
+            (*allocated_symbol).value = value;
+            return allocated_symbol;
+        }
+        else if (value >= FIRST_NONTERMINAL) {
+            // it is nonterminal
+            // rule is non-NULL
+            if (rule != NULL) {
+                (*allocated_symbol).rule = rule;
+            }
+            (*allocated_symbol).value = value;
+            return allocated_symbol;
+        }
+
+    }
+    else if (recycled_list != NULL) {
+        // ONLY ONE MEMBER IN STACK. REMOVE AND ITS EMPTY.
+        SYMBOL *allocated_symbol = recycled_list;
+        recycled_list = NULL; // now is empty (removed LIFO)
+
+        (*allocated_symbol).refcnt = 0; // zeroed
+        (*allocated_symbol).next = 0; // zeroed
+        (*allocated_symbol).prev = 0; // zeroed
+        (*allocated_symbol).nextr = 0; // zeroed
+        (*allocated_symbol).prevr = 0; // zeroed
+
+        if (value < FIRST_NONTERMINAL) {
+            // rule = NULL
+            (*allocated_symbol).rule = NULL;
+            (*allocated_symbol).value = value;
+            return allocated_symbol;
+        }
+        else if (value >= FIRST_NONTERMINAL) {
+            // it is nonterminal
+            // rule is non-NULL
+            if (rule != NULL) {
+                (*allocated_symbol).rule = rule;
+            }
+            (*allocated_symbol).value = value;
+            return allocated_symbol;
+        }
+    }
+    else {
+    // recycled_list == NULL
     struct symbol newsymbol;
     newsymbol.refcnt = 0; // zeroed
     newsymbol.next = 0; // zeroed
@@ -77,6 +144,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         SYMBOL *symptr = &newsymbol;
         return symptr;
     }
+}
     return NULL;
 }
 
@@ -87,7 +155,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
  * once it has been recycled.
  *
  * Symbols being recycled are added to the recycled_symbols list, where they will
- * be made available for re-allocation by a subsequent call to get_symbol.
+ * be made available for re-allocation by a subsequent call to new_symbol.
  * The recycled_symbols list is managed as a LIFO list (i.e. a stack), using the
  * next field of the SYMBOL structure to chain together the entries.
  */

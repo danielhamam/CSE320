@@ -110,6 +110,9 @@ int compress(FILE *in, FILE *out, int bsize) {
  */
 int decompress(FILE *in, FILE *out) {
     // To be implemented.
+
+    fgetc(in); // taking input single byte at a time.
+
     return EOF;
 }
 
