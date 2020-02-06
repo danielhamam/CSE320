@@ -120,7 +120,16 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     }
     else {
     // recycled_list == NULL
-    struct symbol newsymbol;
+
+        // check if storage is full
+        if (num_symbols >= MAX_SYMBOLS) {
+            // issue a message to stderr and abort.
+            fprintf(stderr, "Symbol storage is exhausted! Can not create new symbol.");
+            abort();
+        }
+
+    // else
+    SYMBOL newsymbol = *(symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
     newsymbol.refcnt = 0; // zeroed
     newsymbol.next = 0; // zeroed
     newsymbol.prev = 0; // zeroed
@@ -142,6 +151,8 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         }
         newsymbol.value = value;
         SYMBOL *symptr = &newsymbol;
+        *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
+        num_symbols++; // increment num_symbols global variable.
         return symptr;
     }
 }
@@ -160,5 +171,10 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
  * next field of the SYMBOL structure to chain together the entries.
  */
 void recycle_symbol(SYMBOL *s) {
-    // To be implemented.
+    // Add to beginning of list.
+    (*s).next = (recycled_list); // now it is the head of recycled_list
+    recycled_list = s; // switch to now this being head.
+
+    // Num_symbols lower.
+    num_symbols--;
 }
