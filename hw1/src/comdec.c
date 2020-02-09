@@ -98,6 +98,33 @@ int compress(FILE *in, FILE *out, int bsize) {
     return EOF; // end of file
 }
 
+// helper function to read UTF-8 encoded character from input
+// identify special marker bytes (to parse compressed data transmission into blocks and rules)
+int check_read_amount(char ch) {
+    // From piazza: "0=1 byte, 110=2 bytes, 1110=3 bytes, 11110=4 bytes"
+    // ch is binary 8 bit value
+    int check_first_bit = (ch >> 7) & 1;
+    int check_three_bits = (ch >> 5) & 7; // 7 in binary is 111.
+    int check_four_bits = (ch >> 4) & 15; // 15 in binary is 1111.
+    int check_five_bits = (ch >> 3) & 31; // 31 in binarty is 11111.
+
+    if (check_first_bit == 0) {
+        return 1; // read 1 byte
+    }
+    else if (check_three_bits == 6) { // 110 in binary is 6 in decimal.
+        return 2; // read 2 bytes
+    }
+    else if (check_four_bits == 14) { // 1110 in binary is 14 in decimal
+        return 3; // read 3 bytes
+    }
+    else if (check_five_bits == 30) { // 11110 =in binary is 30 in decimal
+        return 4; // read 4 bytes
+    }
+    else {
+        return -1;
+    }
+}
+
 /**
  * Main decompression function.
  * Reads a compressed data transmission from an input stream, expands it,
@@ -111,9 +138,90 @@ int compress(FILE *in, FILE *out, int bsize) {
 int decompress(FILE *in, FILE *out) {
     // To be implemented.
 
-    fgetc(in); // taking input single byte at a time.
+    char result;
+    while (1) {
+        result = fgetc(in); // taking input single byte at a time.
 
-    return EOF;
+        if (result == EOF) { // check if it is END OF FILE MARKER.
+            break;
+        }
+        // else:
+        int read_amount = check_read_amount(result); // gives us how many bytes we have to read for character
+        int new_value = 0;
+
+        // remember to take off 10 (first two bits) off the next two bytes
+        int results_together = 0;
+        if (read_amount == 1) {
+            result = (result << 1); // get rid of first zero;
+            new_value = result;
+            // now you have the binary code of the character.
+        }
+        else if (read_amount == 2) {
+            result = (result << 3);  // remove 110
+            char result2 = fgetc(in);
+            result2 = (result2 << 2); // remove the first two bytes 10
+            // combine into one number
+            results_together = results_together | result; // result is 5 bits
+            results_together = results_together << 6;
+            results_together = results_together | result2; // result2 is 6 bits.
+            new_value = results_together;
+        }
+        else if (read_amount == 3) {
+            result = (result << 4); // remove 1110
+            char result2 = fgetc(in); // next byte #2
+            result2 = (result2 << 2);
+            char result3 = fgetc(in); // next byte #3
+            result3 = (result3 << 2);
+
+            // combine into one binary number
+            results_together = results_together | result;
+            results_together = results_together << 6;
+            results_together = results_together | result2;
+            results_together = results_together << 6;
+            results_together = results_together | result3;
+            new_value = results_together;
+        }
+        else if (read_amount == 4) {
+            result = (result << 5); // remove 11110
+            char result2 = fgetc(in); // next byte #2
+            result2 = (result2 << 2);
+            char result3 = fgetc(in); // next byte #3
+            result3 = (result3 << 2);
+            char result4 = fgetc(in); // next byte #4
+            result4 = (result4 << 2);
+            // combine into one binary number
+            results_together = results_together | result;
+            results_together = results_together << 6;
+            results_together = results_together | result2;
+            results_together = results_together << 6;
+            results_together = results_together | result3;
+            results_together = results_together << 6;
+            results_together = results_together | result4;
+            new_value = results_together;
+        }
+
+        // Piazza: Rule parameters all supposed to be null while reading. Assign after reading.
+        if (new_value < FIRST_NONTERMINAL) {
+            // make new symbol
+            new_symbol(new_value, NULL);
+        }
+        else if (new_value > FIRST_NONTERMINAL) {
+            // make new rule
+            SYMBOL *new_sym = new_symbol(new_value, NULL);
+            add_rule(new_sym);
+            // main_rule points to head of rule list
+            // *(rule_map + )
+            // RULE parameter can be used to specify a rule having that nonterminal at its head.
+
+            new_symbol(new_value, NULL); // rule* is null
+
+        }
+
+    } // end of while(1) loop
+
+    fflush(out); // ensure no output remains buffered in memory.
+
+    return EOF; // file does not follow format
 }
 
 /**

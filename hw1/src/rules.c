@@ -77,23 +77,16 @@ void init_rules(void) {
  */
 SYMBOL *new_rule(int v) {
     // To be implemented.
-
-    // first symbol is nonterminal head
-    if (v < FIRST_NONTERMINAL) {
-        return NULL;
-    }
-    else {
-        // value is nonterminal
-        // DECLARE HEADER:
-        struct symbol newheadsymbol; // sentinel
-        SYMBOL *headptr = &newheadsymbol;
-        newheadsymbol.refcnt = 0;
-        newheadsymbol.value = v; // set value to parameter v
-        newheadsymbol.nextr = 0;
-        newheadsymbol.prevr = 0;
-        newheadsymbol.rule = headptr; // sentinel points back to itself
-        return headptr;
-    }
+    // value is nonterminal
+    // DECLARE HEADER:
+    struct symbol newheadsymbol; // sentinel
+    SYMBOL *headptr = &newheadsymbol;
+    newheadsymbol.refcnt = 0;
+    newheadsymbol.value = v; // set value to parameter v
+    newheadsymbol.nextr = 0;
+    newheadsymbol.prevr = 0;
+    newheadsymbol.rule = headptr; // sentinel points back to itself
+    return headptr;
 
     return NULL;
 }
@@ -120,11 +113,11 @@ void add_rule(SYMBOL *rule) {
     else {
         // main_rule is not NULL, insert between main_rule --> prev and main_rule
 
-        (*rule).prev = (*main_rule).prev; // new rule's prev is the NOW second to last node.
-        (*((*main_rule).prev)).next = rule; // Second to last node's next is rule
+        (*rule).prevr = (*main_rule).prevr; // new rule's prev is the NOW second to last node.
+        (*((*main_rule).prevr)).nextr = rule; // Second to last node's next is rule
 
-        (*rule).next = main_rule; // new rule's next is head.
-        (*main_rule).prev = rule; // main rule's previous is new rule node.
+        (*rule).nextr = main_rule; // new rule's next is head.
+        (*main_rule).prevr = rule; // main rule's previous is new rule node.
 
         // new rule is inserted at the end of the list.
 
@@ -148,6 +141,7 @@ void delete_rule(SYMBOL *rule) {
     // change the connections
     (*(*rule).prev).next = (*rule).next;
     (*(*rule).next).prev = (*rule).prev;
+    // perhaps edit nextr and prevr
 
     if ((*rule).refcnt == 0) {
         // rule head is recycled

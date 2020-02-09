@@ -175,6 +175,6 @@ void recycle_symbol(SYMBOL *s) {
     (*s).next = (recycled_list); // now it is the head of recycled_list
     recycled_list = s; // switch to now this being head.
 
-    // Num_symbols lower.
-    num_symbols--;
+    // // Num_symbols lower.
+    // num_symbols--;
 }
