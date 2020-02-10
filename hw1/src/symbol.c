@@ -141,6 +141,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         newsymbol.rule = NULL;
         newsymbol.value = value;
         SYMBOL *symptr = &newsymbol;
+        num_symbols++;
         return symptr;
     }
     else if (value >= FIRST_NONTERMINAL) {

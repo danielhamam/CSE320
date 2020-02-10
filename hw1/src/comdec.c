@@ -103,9 +103,9 @@ int compress(FILE *in, FILE *out, int bsize) {
 int check_read_amount(char ch) {
     // From piazza: "0=1 byte, 110=2 bytes, 1110=3 bytes, 11110=4 bytes"
     // ch is binary 8 bit value
-    int check_first_bit = (ch >> 7) & 1;
-    int check_three_bits = (ch >> 5) & 7; // 7 in binary is 111.
-    int check_four_bits = (ch >> 4) & 15; // 15 in binary is 1111.
+    int check_first_bit = (ch >> 7);
+    int check_three_bits = (ch >> 5); // 7 in binary is 111.
+    int check_four_bits = (ch >> 4); // 15 in binary is 1111.
     int check_five_bits = (ch >> 3) & 31; // 31 in binarty is 11111.
 
     if (check_first_bit == 0) {
@@ -137,8 +137,10 @@ int check_read_amount(char ch) {
  */
 int decompress(FILE *in, FILE *out) {
     // To be implemented.
+    init_rules();
 
     char result;
+    SYMBOL *global_rule;
     while (1) {
         result = fgetc(in); // taking input single byte at a time.
 
@@ -204,13 +206,18 @@ int decompress(FILE *in, FILE *out) {
         if (new_value < FIRST_NONTERMINAL) {
             // make new symbol
             new_symbol(new_value, NULL);
+
+            if (global_rule != NULL) {
+                new_symbol(new_value, global_rule);
+            }
         }
         else if (new_value > FIRST_NONTERMINAL) {
             // make new rule
-            SYMBOL *new_sym = new_symbol(new_value, NULL);
-            add_rule(new_sym);
+            SYMBOL *new_rule1 = new_rule(new_value);
+            add_rule(new_rule);
+            global_rule = new_rule1;
             // main_rule points to head of rule list
-            // *(rule_map + )
+
             // RULE parameter can be used to specify a rule having that nonterminal at its head.
 
             new_symbol(new_value, NULL); // rule* is null

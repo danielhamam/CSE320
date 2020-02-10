@@ -53,12 +53,12 @@ void init_rules(void) {
     // To be implemented.
     main_rule = NULL;
     int max = 0;
+    SYMBOL **temp = rule_map;
     while (max != num_symbols) {
-        *(rule_map + max) = NULL;
+        *(temp + max) = NULL;
         // rule_map = rule_map - max;
         max++;
     }
-}
 
 /**
  * Create a new rule, with a head having a specified value.
@@ -79,16 +79,13 @@ SYMBOL *new_rule(int v) {
     // To be implemented.
     // value is nonterminal
     // DECLARE HEADER:
-    struct symbol newheadsymbol; // sentinel
-    SYMBOL *headptr = &newheadsymbol;
-    newheadsymbol.refcnt = 0;
-    newheadsymbol.value = v; // set value to parameter v
-    newheadsymbol.nextr = 0;
-    newheadsymbol.prevr = 0;
-    newheadsymbol.rule = headptr; // sentinel points back to itself
-    return headptr;
-
-    return NULL;
+    SYMBOL *newsymbol = new_symbol(v, NULL); // sentinel
+    (*newsymbol).refcnt = 0;
+    (*newsymbol).value = v; // set value to parameter v
+    (*newsymbol).nextr = 0;
+    (*newsymbol).prevr = 0;
+    (*newsymbol).rule = newsymbol; // sentinel points back to itself
+    return newsymbol;
 }
 
 /**
