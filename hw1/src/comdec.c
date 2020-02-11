@@ -106,7 +106,7 @@ int check_read_amount(char ch) {
     int check_first_bit = (ch >> 7);
     int check_three_bits = (ch >> 5); // 7 in binary is 111.
     int check_four_bits = (ch >> 4); // 15 in binary is 1111.
-    int check_five_bits = (ch >> 3) & 31; // 31 in binarty is 11111.
+    int check_five_bits = (ch >> 3); // 31 in binarty is 11111.
 
     if (check_first_bit == 0) {
         return 1; // read 1 byte
@@ -117,12 +117,30 @@ int check_read_amount(char ch) {
     else if (check_four_bits == 14) { // 1110 in binary is 14 in decimal
         return 3; // read 3 bytes
     }
-    else if (check_five_bits == 30) { // 11110 =in binary is 30 in decimal
+    else if (check_five_bits == 30) { // 11110 in binary is 30 in decimal
         return 4; // read 4 bytes
     }
     else {
         return -1;
     }
+}
+
+/**
+* Recursive function to output decompressed data bytes
+*/
+void decompress_helper(SYMBOL *rule, FILE *out) {
+    SYMBOL *target = rule;
+    while ( (*target).value != 0x82) { // end of transmission marker
+
+        if ((*target).value < FIRST_NONTERMINAL) { // terminal value
+            fputc((*target).value, out);
+            target = (*target).next;
+        }
+        else if ((*target).value > FIRST_NONTERMINAL) {
+            decompress_helper(target, out); // recursive call
+        }
+    }
+
 }
 
 /**
@@ -137,16 +155,39 @@ int check_read_amount(char ch) {
  */
 int decompress(FILE *in, FILE *out) {
     // To be implemented.
-    init_rules();
 
     char result;
-    SYMBOL *global_rule;
+    SYMBOL *head_rule;
+    int boolean = 0;
     while (1) {
+
         result = fgetc(in); // taking input single byte at a time.
 
-        if (result == EOF) { // check if it is END OF FILE MARKER.
+        // Check for start of transmission:
+        if (result == 0x81) {
+            init_rules();
+            init_symbols();
+            continue;
+        }
+
+        // Check for end of transmission:
+        if (result == 0x82) { // check if it is END OF FILE MARKER.
             break;
         }
+
+        // Check for start of block:
+        if (result == 0x83) {
+            continue; // go to next iteration
+        }
+
+        // Check for end of block:
+        if (result == 0x84) {
+            // From Piazza: "you want to reset everything" between each block
+            init_rules();
+            init_symbols();
+            continue; // go to next iteration
+        }
+
         // else:
         int read_amount = check_read_amount(result); // gives us how many bytes we have to read for character
         int new_value = 0;
@@ -202,32 +243,47 @@ int decompress(FILE *in, FILE *out) {
             new_value = results_together;
         }
 
+        // NOW THEY ALL GO TO THIS:
+
         // Piazza: Rule parameters all supposed to be null while reading. Assign after reading.
         if (new_value < FIRST_NONTERMINAL) {
             // make new symbol
-            new_symbol(new_value, NULL);
-
-            if (global_rule != NULL) {
-                new_symbol(new_value, global_rule);
+            if (head_rule != NULL) {
+                new_symbol(new_value, head_rule);
+            }
+            else {
+                new_symbol(new_value, NULL);
             }
         }
-        else if (new_value > FIRST_NONTERMINAL) {
-            // make new rule
+        else if (new_value > FIRST_NONTERMINAL && boolean == 0) { // boolean 0 means first rule not found
+            // make new HEAD rule
             SYMBOL *new_rule1 = new_rule(new_value);
-            add_rule(new_rule);
-            global_rule = new_rule1;
-            // main_rule points to head of rule list
+            *(rule_map + new_value) = new_rule1; // increments by value and sets it to rule.
+            add_rule(new_rule1);
+            head_rule = new_rule1;
+            boolean = 1;
 
+            (*new_rule1).prev = (*main_rule).prev;
+            (*(*main_rule).prev).next = new_rule1;
             // RULE parameter can be used to specify a rule having that nonterminal at its head.
-
-            new_symbol(new_value, NULL); // rule* is null
-
         }
+        else if (new_value > FIRST_NONTERMINAL && boolean != 0) { // boolean 0 means we already found first rule
+
+            // there is already a head rule
+            SYMBOL *new_rule1 = new_symbol(new_value, NULL);
+            (*new_rule1).prev = (*main_rule).prev;
+            (*(*main_rule).prev).next = new_rule1;
+        }
+
+
+        // Now that we have all the symbols from main_rule, use rules to perform expansion
+        decompress_helper(main_rule, out);
+
+
 
     } // end of while(1) loop
 
     fflush(out); // ensure no output remains buffered in memory.
-
     return EOF; // file does not follow format
 }
 

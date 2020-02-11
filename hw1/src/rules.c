@@ -59,6 +59,7 @@ void init_rules(void) {
         // rule_map = rule_map - max;
         max++;
     }
+}
 
 /**
  * Create a new rule, with a head having a specified value.
@@ -182,4 +183,5 @@ void unref_rule(SYMBOL *rule) {
     }
 
     (*rule).refcnt = (*rule).refcnt - 1;
+
 }
