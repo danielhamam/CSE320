@@ -54,7 +54,10 @@ void init_symbols(void) {
  */
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
     // To be implemented.
-
+    SYMBOL newsymbol = *(symbol_storage + num_symbols);
+    SYMBOL *ptr = &newsymbol;
+    printf("RECYCLED LIST:");
+    return ptr;
     // first, check if recycled symbols is empty. DONT USE PREV for recycled_symbols
     if (((*recycled_list).next) != NULL) {
         // its not empty (LIFO REMEMBER)
@@ -89,7 +92,6 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
             (*allocated_symbol).value = value;
             return allocated_symbol;
         }
-
     }
     else if (recycled_list != NULL) {
         // ONLY ONE MEMBER IN STACK. REMOVE AND ITS EMPTY.

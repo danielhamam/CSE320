@@ -100,24 +100,25 @@ int compress(FILE *in, FILE *out, int bsize) {
 
 // helper function to read UTF-8 encoded character from input
 // identify special marker bytes (to parse compressed data transmission into blocks and rules)
-int check_read_amount(char ch) {
+int check_read_amount(unsigned char ch) {
     // From piazza: "0=1 byte, 110=2 bytes, 1110=3 bytes, 11110=4 bytes"
     // ch is binary 8 bit value
+
     int check_first_bit = (ch >> 7);
     int check_three_bits = (ch >> 5); // 7 in binary is 111.
     int check_four_bits = (ch >> 4); // 15 in binary is 1111.
     int check_five_bits = (ch >> 3); // 31 in binarty is 11111.
 
-    if (check_first_bit == 0) {
+    if (check_first_bit == 0b0) {
         return 1; // read 1 byte
     }
-    else if (check_three_bits == 6) { // 110 in binary is 6 in decimal.
+    else if (check_three_bits == 0b110) { // 110 in binary is 6 in decimal.
         return 2; // read 2 bytes
     }
-    else if (check_four_bits == 14) { // 1110 in binary is 14 in decimal
+    else if (check_four_bits == 0b1110) { // 1110 in binary is 14 in decimal
         return 3; // read 3 bytes
     }
-    else if (check_five_bits == 30) { // 11110 in binary is 30 in decimal
+    else if (check_five_bits == 0b11110) { // 11110 in binary is 30 in decimal
         return 4; // read 4 bytes
     }
     else {
@@ -156,13 +157,15 @@ void decompress_helper(SYMBOL *rule, FILE *out) {
 int decompress(FILE *in, FILE *out) {
     // To be implemented.
 
-    char result;
-    SYMBOL *head_rule;
+    unsigned char result;
+    SYMBOL *head_rule = NULL;
     int boolean = 0;
+    int loops = 0;
     while (1) {
 
-        result = fgetc(in); // taking input single byte at a time.
-
+        result = fgetc(in); // taking input single byte at a time
+        printf("LOOP : %d", loops);
+        loops++;
         // Check for start of transmission:
         if (result == 0x81) {
             init_rules();
@@ -189,20 +192,26 @@ int decompress(FILE *in, FILE *out) {
         }
 
         // else:
+        printf(" /// RESULT IS %x ///", result);
         int read_amount = check_read_amount(result); // gives us how many bytes we have to read for character
-        int new_value = 0;
+        unsigned int new_value = 0;
+
+        printf("READ AMOUNT: %d", read_amount);
 
         // remember to take off 10 (first two bits) off the next two bytes
-        int results_together = 0;
+        unsigned int results_together = 0;
         if (read_amount == 1) {
-            result = (result << 1); // get rid of first zero;
+            result = (result & 0b01111111); // get rid of first zero;
             new_value = result;
+            printf("KEY1");
+
             // now you have the binary code of the character.
         }
         else if (read_amount == 2) {
-            result = (result << 3);  // remove 110
-            char result2 = fgetc(in);
-            result2 = (result2 << 2); // remove the first two bytes 10
+            printf("KEY2");
+            result = (result & 0b00011111);  // remove 110
+            unsigned char result2 = fgetc(in);
+            result2 = (result2 & 0b00111111); // remove the first two bytes 10
             // combine into one number
             results_together = results_together | result; // result is 5 bits
             results_together = results_together << 6;
@@ -210,11 +219,12 @@ int decompress(FILE *in, FILE *out) {
             new_value = results_together;
         }
         else if (read_amount == 3) {
-            result = (result << 4); // remove 1110
-            char result2 = fgetc(in); // next byte #2
-            result2 = (result2 << 2);
-            char result3 = fgetc(in); // next byte #3
-            result3 = (result3 << 2);
+            printf("KEY3");
+            result = (result & 0b00001111); // remove 1110
+            unsigned char result2 = fgetc(in); // next byte #2
+            result2 = (result2 & 0b00111111);
+            unsigned char result3 = fgetc(in); // next byte #3
+            result3 = (result3 & 0b00111111);
 
             // combine into one binary number
             results_together = results_together | result;
@@ -225,13 +235,15 @@ int decompress(FILE *in, FILE *out) {
             new_value = results_together;
         }
         else if (read_amount == 4) {
-            result = (result << 5); // remove 11110
-            char result2 = fgetc(in); // next byte #2
-            result2 = (result2 << 2);
-            char result3 = fgetc(in); // next byte #3
-            result3 = (result3 << 2);
-            char result4 = fgetc(in); // next byte #4
-            result4 = (result4 << 2);
+            printf("KEY4");
+            // return 0;
+            result = (result & 0b00000111); // remove 11110
+            unsigned char result2 = fgetc(in); // next byte #2
+            result2 = (result2 & 0b00111111);
+            unsigned char result3 = fgetc(in); // next byte #3
+            result3 = (result3 & 0b00111111);
+            unsigned char result4 = fgetc(in); // next byte #4
+            result4 = (result4 & 0b00111111);
             // combine into one binary number
             results_together = results_together | result;
             results_together = results_together << 6;
@@ -242,9 +254,15 @@ int decompress(FILE *in, FILE *out) {
             results_together = results_together | result4;
             new_value = results_together;
         }
+        else {
+            printf("DOESNT FIT CRITERIA");
+            return 0;
+        }
+
+        printf("SYMBOL IS: %d ", new_value);
+
 
         // NOW THEY ALL GO TO THIS:
-
         // Piazza: Rule parameters all supposed to be null while reading. Assign after reading.
         if (new_value < FIRST_NONTERMINAL) {
             // make new symbol
@@ -255,19 +273,22 @@ int decompress(FILE *in, FILE *out) {
                 new_symbol(new_value, NULL);
             }
         }
-        else if (new_value > FIRST_NONTERMINAL && boolean == 0) { // boolean 0 means first rule not found
+        else if ( (new_value >= FIRST_NONTERMINAL) && boolean == 0) { // boolean 0 means first rule not found
             // make new HEAD rule
             SYMBOL *new_rule1 = new_rule(new_value);
+            return 0;
             *(rule_map + new_value) = new_rule1; // increments by value and sets it to rule.
             add_rule(new_rule1);
+
+
             head_rule = new_rule1;
             boolean = 1;
-
             (*new_rule1).prev = (*main_rule).prev;
             (*(*main_rule).prev).next = new_rule1;
+
             // RULE parameter can be used to specify a rule having that nonterminal at its head.
         }
-        else if (new_value > FIRST_NONTERMINAL && boolean != 0) { // boolean 0 means we already found first rule
+        else if (new_value >= FIRST_NONTERMINAL && boolean != 0) { // boolean 0 means we already found first rule
 
             // there is already a head rule
             SYMBOL *new_rule1 = new_symbol(new_value, NULL);
@@ -305,10 +326,11 @@ int decompress(FILE *in, FILE *out) {
  */
 int validargs(int argc, char **argv) {
 
+    char **replace_argv = argv;
     if (argc > 1) { // if its more than just bin/sequitur (which is first argument)
 
-        argv++; // now we have focus on position argv[1], where argument(s) should start.
-        char* argpointer1 = *argv; // points to memory of '-' argv[1][0]
+        replace_argv++; // now we have focus on position argv[1], where argument(s) should start.
+        char* argpointer1 = *replace_argv; // points to memory of '-' argv[1][0]
 
         char arg_position1 = *argpointer1; // explicit value of position argv[1]
 
@@ -356,8 +378,8 @@ int validargs(int argc, char **argv) {
                     // }
                     return 0; // true because -c is first and only argument. (no optional)
                 }
-                argv++; // now we have focus on position argv[2] (after 1st argument.)
-                char* argpointer2 = *argv; // points to memory of next argument argv[2][0]
+                replace_argv++; // now we have focus on position argv[2] (after 1st argument.)
+                char* argpointer2 = *replace_argv; // points to memory of next argument argv[2][0]
                 char arg_position2 = *argpointer2; // explicit value of position argv[2]
                 if (arg_position2 == '-') {
                     // second arg is an argument
@@ -380,9 +402,9 @@ int validargs(int argc, char **argv) {
                         }
                         // printf("checking for b");
                         // now check that after b is digit checked.
-                        argv++; //now focused on 3rd argument after -b
-                        char* argpointer3 = *argv;
-                        char* holderofposition = *argv;
+                        replace_argv++; //now focused on 3rd argument after -b
+                        char* argpointer3 = *replace_argv;
+                        char* holderofposition = *replace_argv;
                         char arg_position3 = *argpointer3; // explicit value of position argv[3]
                         int size = 0;
                         // CHECK IF DIGITS ARE VALID:
@@ -455,7 +477,7 @@ int validargs(int argc, char **argv) {
                         }
                         // Passed checks:
                         // printf("Passed all checks for b");
-                        global_options = atoiPositive(*argv);
+                        global_options = atoiPositive(*replace_argv);
                         global_options =  global_options << 16;
                         global_options = global_options | 2; // c bit is 1 (so we or it with blocksize
                         // printf("GLOBAL OPTIONS IS EQUAL TO: %d", global_options);

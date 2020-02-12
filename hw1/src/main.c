@@ -19,16 +19,11 @@
 int main(int argc, char **argv)
 {
 
-    printf("%p", argv);
-    printf("%s", "-------------------");
-
     if (validargs(argc, argv))
         USAGE(*argv, EXIT_FAILURE);
     debug("Options: 0x%x", global_options);
     if (global_options & 1)
         USAGE(*argv, EXIT_SUCCESS);
-
-    printf("%p", argv);
 
     char **temp_double = argv;
     temp_double++;
@@ -37,15 +32,11 @@ int main(int argc, char **argv)
     d_pointer++; // go to second position
     char d = *d_pointer;
     if (dash == '-' && d == 'd') {
-        printf("%c", dash);
-        printf("%c", d);
-        temp_double++;
-        char *d_pointer = *temp_double;
-        // printf("%d", *d_pointer)
-        // printf("%c", *d_pointer);
+        // printf("%c", dash);
+        // printf("%c", d);
     }
 
-    // decompress(stdin, stdout);
+    decompress(stdin, stdout);
 
     return EXIT_SUCCESS;
 }
