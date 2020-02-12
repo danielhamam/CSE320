@@ -54,14 +54,13 @@ void init_symbols(void) {
  */
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
     // To be implemented.
-    SYMBOL newsymbol = *(symbol_storage + num_symbols);
-    SYMBOL *ptr = &newsymbol;
-    printf("RECYCLED LIST:");
-    return ptr;
+    // SYMBOL newsymbol = *(symbol_storage + num_symbols);
+    // SYMBOL *ptr = &newsymbol;
+    // return ptr;
     // first, check if recycled symbols is empty. DONT USE PREV for recycled_symbols
-    if (((*recycled_list).next) != NULL) {
-        // its not empty (LIFO REMEMBER)
-
+    // CHECK IF TWO MEMBERS IN THE STACK:
+    if ( recycled_list != NULL && (*recycled_list).next != NULL) {
+        // its not empty (LIFO REMEMBER);
         SYMBOL *temp = recycled_list; // made pointer to preserve recycled_list
         while( (*temp).next != NULL) {
             temp = (*temp).next;
@@ -94,6 +93,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         }
     }
     else if (recycled_list != NULL) {
+
         // ONLY ONE MEMBER IN STACK. REMOVE AND ITS EMPTY.
         SYMBOL *allocated_symbol = recycled_list;
         recycled_list = NULL; // now is empty (removed LIFO)
@@ -114,7 +114,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
             // it is nonterminal
             // rule is non-NULL
             if (rule != NULL) {
-                (*allocated_symbol).rule = rule;
+                (*allocated_symbol).rule = NULL;
             }
             (*allocated_symbol).value = value;
             return allocated_symbol;
@@ -122,7 +122,6 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     }
     else {
     // recycled_list == NULL
-
         // check if storage is full
         if (num_symbols >= MAX_SYMBOLS) {
             // issue a message to stderr and abort.
@@ -131,6 +130,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         }
 
     // else
+    // printf("numsymbols: %d", num_symbols);
     SYMBOL newsymbol = *(symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
     newsymbol.refcnt = 0; // zeroed
     newsymbol.next = 0; // zeroed
@@ -150,7 +150,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         // it is nonterminal
         // rule is non-NULL
         if (rule != NULL) {
-            newsymbol.rule = rule;
+            newsymbol.rule = NULL;
         }
         newsymbol.value = value;
         SYMBOL *symptr = &newsymbol;

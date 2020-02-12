@@ -53,9 +53,10 @@ void init_rules(void) {
     // To be implemented.
     main_rule = NULL;
     int max = 0;
-    SYMBOL **temp = rule_map;
+    // SYMBOL **temp = rule_map;
     while (max != num_symbols) {
-        *(temp + max) = NULL;
+        *(rule_map + max) = NULL;
+        printf("LOOP MAX: %d", max);
         // rule_map = rule_map - max;
         max++;
     }
@@ -107,6 +108,15 @@ void add_rule(SYMBOL *rule) {
         main_rule = rule;
         (*main_rule).nextr = main_rule;
         (*main_rule).prevr = main_rule;
+    }
+    else if (main_rule != NULL && (*main_rule).next == NULL) { // only main_rule
+
+        (*rule).prevr = main_rule; // new rule's prev is the NOW second to last node.
+        (*main_rule).nextr = rule; // Second to last node's next is rule
+
+        (*rule).nextr = main_rule; // new rule's next is head.
+        (*main_rule).prevr = rule; // main rule's previous is new rule node.
+
     }
     else {
         // main_rule is not NULL, insert between main_rule --> prev and main_rule
