@@ -128,7 +128,6 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
             fprintf(stderr, "Symbol storage is exhausted! Can not create new symbol.");
             abort();
         }
-
     // else
     // printf("numsymbols: %d", num_symbols);
     SYMBOL newsymbol = *(symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
@@ -149,12 +148,10 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     else if (value >= FIRST_NONTERMINAL) {
         // it is nonterminal
         // rule is non-NULL
-        if (rule != NULL) {
-            newsymbol.rule = NULL;
-        }
+        newsymbol.rule = NULL;
         newsymbol.value = value;
         SYMBOL *symptr = &newsymbol;
-        *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
+        // *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
         num_symbols++; // increment num_symbols global variable.
         return symptr;
     }

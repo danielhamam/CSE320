@@ -50,13 +50,22 @@
  * Initializes the rules by setting main_rule to NULL and clearing the rule_map.
  */
 void init_rules(void) {
+        // printf("DONE");
     // To be implemented.
+    // if ( (*main_rule).nextr != NULL) {
+        // (*main_rule).nextr = NULL;
+    // }
+    // if ((*main_rule).prevr != NULL) {
+        // (*main_rule).prevr = NULL;
+    // }
     main_rule = NULL;
+    // abort();
+
     int max = 0;
     // SYMBOL **temp = rule_map;
     while (max != num_symbols) {
         *(rule_map + max) = NULL;
-        printf("LOOP MAX: %d", max);
+        // printf("LOOP MAX: %d", max);
         // rule_map = rule_map - max;
         max++;
     }
@@ -109,18 +118,16 @@ void add_rule(SYMBOL *rule) {
         (*main_rule).nextr = main_rule;
         (*main_rule).prevr = main_rule;
     }
-    else if (main_rule != NULL && (*main_rule).next == NULL) { // only main_rule
-
-        (*rule).prevr = main_rule; // new rule's prev is the NOW second to last node.
+    else if (main_rule != NULL && (*main_rule).nextr == NULL) { // only main_rule
+        // printf("THIS HAPPENED");
+        (*rule).prevr = main_rule; // new rule's prev is the NOW second to last node
         (*main_rule).nextr = rule; // Second to last node's next is rule
-
         (*rule).nextr = main_rule; // new rule's next is head.
         (*main_rule).prevr = rule; // main rule's previous is new rule node.
-
     }
     else {
-        // main_rule is not NULL, insert between main_rule --> prev and main_rule
-
+        // main_rule is not NULL, insert between main_rule --> prev and main_rule-
+         // printf("HEREEEEEEEEEEEE: %p ", (*main_rule).nextr );
         (*rule).prevr = (*main_rule).prevr; // new rule's prev is the NOW second to last node.
         (*((*main_rule).prevr)).nextr = rule; // Second to last node's next is rule
 
@@ -128,7 +135,6 @@ void add_rule(SYMBOL *rule) {
         (*main_rule).prevr = rule; // main rule's previous is new rule node.
 
         // new rule is inserted at the end of the list.
-
     }
 }
 

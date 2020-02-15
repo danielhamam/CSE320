@@ -34,9 +34,8 @@ int main(int argc, char **argv)
     if (dash == '-' && d == 'd') {
         // printf("%c", dash);
         // printf("%c", d);
+        decompress(stdin, stdout);
     }
-
-    decompress(stdin, stdout);
 
     return EXIT_SUCCESS;
 }
