@@ -139,27 +139,34 @@ void decompress_helper(SYMBOL *rule, FILE *out) {
     // target = (*target).next;
         // return;
     // printf("THIS: %d", (*target).value);
+    printf("TARGET: %p\n", target);
+     printf("NEXT: %p\n", target->next);
 
+    while ( target != NULL) { // end of transmission marker
+        printf("THIS: %x\n", (*target).value);
 
-    while ( (*target).next != NULL) { // end of transmission marker
-        printf("THIS: %d", (*target).value);
         // return;
         // printf("NONTERMINAL: %x", FIRST_NONTERMINAL);
         // PROBLEM SOMEWHERE AROUND HERE. RETURN 0 VALUE  < 256
         if ((*target).value < FIRST_NONTERMINAL) { // terminal value
+           printf("HEY1\n");
             fputc((*target).value, out);
-            printf("HEY1");
+
             target = (*target).next;
         }
         else if ((*target).value >= FIRST_NONTERMINAL && *(rule_map + (*target).value) != NULL ) {
+            printf("HEY2\n");
+
             SYMBOL *rule1 = *(rule_map + (*target).value);
-            printf("HEY2");
+            printf("HEY2.1\n");
+            // printf("NE");
             decompress_helper( (*rule1).next , out); // recursive call
-            // target = (*target).next;
+            target = (*target).next;
         }
         else if ((*target).value >= FIRST_NONTERMINAL && *(rule_map + (*target).value) == NULL) {
+            printf("HEY3\n");
             fputc((*target).value, out);
-            printf("HEY3");
+
             target = (*target).next;
         }
         else {
@@ -218,8 +225,9 @@ int decompress(FILE *in, FILE *out) {
         if (result == 0x84) {
             // From Piazza: "you want to reset everything" between each block
             printf("END BLOCK");
+            // return 0;
             decompress_helper( main_rule, out );
-            return 0;
+            // return 0;
 
 
             boolean = 0;
@@ -231,6 +239,7 @@ int decompress(FILE *in, FILE *out) {
         // Rule delimiter
         if (result == 0x85) {
             // Reset so new head rule
+            printf(" END RULE\n");
             // printf("DELIMITER lOOP: %d", loops);
             boolean = 0;
             continue;
@@ -306,7 +315,12 @@ int decompress(FILE *in, FILE *out) {
         // printf("SYMBOL IS: %d ", new_value);
 
         // NOW THEY ALL GO TO THIS:
-        // printf("%c", new_value);
+        if(new_value > 255){
+        printf("%x ", new_value);
+         }
+         else if(new_value ==10)  printf("[nl] ");
+         else if(new_value ==32) printf("[ws] ");
+         else  printf("%c ", new_value);
         // fputc(new_value, stdout);
         // Piazza: Rule parameters all supposed to be null while reading. Assign after reading.
         if (new_value < FIRST_NONTERMINAL) {
@@ -316,7 +330,7 @@ int decompress(FILE *in, FILE *out) {
             // Connect
             if ( (*head_rule).prev ) {
                 (*newsymb).prev = (*head_rule).prev;
-                (*(*head_rule).prev).next = newsymb;
+                head_rule->prev->next = newsymb;
             }
             else {
                 // only head
@@ -331,11 +345,13 @@ int decompress(FILE *in, FILE *out) {
 
             // make new HEAD rule
             SYMBOL *new_rule1 = new_rule(new_value);
+
             *(rule_map + new_value) = new_rule1; // increments by value and sets it to rule
+                            // SYMBOL *rule1 = *(rule_map) + (*target).value * sizeof(rule_map);
             add_rule(new_rule1);
             (*new_rule1).next = new_rule1;
             (*new_rule1).prev = new_rule1;
-            // add to
+            // add to=
 
             head_rule = new_rule1;
             boolean = 1;

@@ -93,8 +93,8 @@ SYMBOL *new_rule(int v) {
     SYMBOL *newsymbol = new_symbol(v, NULL); // sentinel
     (*newsymbol).refcnt = 0;
     (*newsymbol).value = v; // set value to parameter v
-    (*newsymbol).nextr = 0;
-    (*newsymbol).prevr = 0;
+    (*newsymbol).nextr = NULL;
+    (*newsymbol).prevr = NULL;
     (*newsymbol).rule = newsymbol; // sentinel points back to itself
     return newsymbol;
 }
