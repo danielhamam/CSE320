@@ -63,12 +63,12 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         // its not empty (LIFO REMEMBER);
         SYMBOL *temp = recycled_list; // made pointer to preserve recycled_list
         while( (*temp).next != NULL) {
-            temp = (*temp).next;
+            temp = temp->next;
         }
         // temp refers to last node in recycled_list (LIFO)
         SYMBOL *allocated_symbol = temp; // used to satisfy the request. removed from recycling list
         temp--; // go to previous node
-        (*temp).next = NULL; // deleted last node
+        temp->next = NULL; // deleted last node
 
         (*allocated_symbol).refcnt = 0; // zeroed
         (*allocated_symbol).next = 0; // zeroed
@@ -93,7 +93,6 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         }
     }
     else if (recycled_list != NULL) {
-
         // ONLY ONE MEMBER IN STACK. REMOVE AND ITS EMPTY.
         SYMBOL *allocated_symbol = recycled_list;
         recycled_list = NULL; // now is empty (removed LIFO)
@@ -136,25 +135,13 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     newsymbol.prev = 0; // zeroed
     newsymbol.nextr = 0; // zeroed
     newsymbol.prevr = 0; // zeroed
-    // Checking if  terminal
-    if (value < FIRST_NONTERMINAL) {
-        // rule = NULL
-        newsymbol.rule = NULL;
-        newsymbol.value = value;
-        SYMBOL *symptr = &newsymbol;
-        num_symbols++;
-        return symptr;
-    }
-    else if (value >= FIRST_NONTERMINAL) {
-        // it is nonterminal
-        // rule is non-NULL
-        newsymbol.rule = NULL;
-        newsymbol.value = value;
-        SYMBOL *symptr = &newsymbol;
-        // *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
-        num_symbols++; // increment num_symbols global variable.
-        return symptr;
-    }
+    newsymbol.rule = NULL;
+    newsymbol.value = value;
+    SYMBOL *symptr = &newsymbol;
+    *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
+    num_symbols++; // increment num_symbols global variable.
+    // printf("THIS VALUE: %d", symptr->value);
+    return symptr;
 }
     return NULL;
 }

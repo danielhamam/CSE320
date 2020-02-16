@@ -134,47 +134,24 @@ int check_read_amount(unsigned int ch) {
 * Recursive function to output decompressed data bytes
 */
 void decompress_helper(SYMBOL *rule, FILE *out) {
-    SYMBOL *target = rule;
-    // printf("HEY");
-    // target = (*target).next;
-        // return;
-    // printf("THIS: %d", (*target).value);
-    printf("TARGET: %p\n", target);
-     printf("NEXT: %p\n", target->next);
 
-    while ( target != NULL) { // end of transmission marker
-        printf("THIS: %x\n", (*target).value);
+    if (rule->next == NULL) return;
 
-        // return;
-        // printf("NONTERMINAL: %x", FIRST_NONTERMINAL);
-        // PROBLEM SOMEWHERE AROUND HERE. RETURN 0 VALUE  < 256
-        if ((*target).value < FIRST_NONTERMINAL) { // terminal value
-           printf("HEY1\n");
-            fputc((*target).value, out);
+        printf("THIS: %d\n", (rule->value)) ;
+        printf("TARGET: %p\n", rule);
+        printf("NEXT: %p\n", rule->next);
 
-            target = (*target).next;
+        if ( (rule->value) < FIRST_NONTERMINAL) { // terminal value
+           fputc(rule->value, out);
+           decompress_helper(rule->next, out);
         }
-        else if ((*target).value >= FIRST_NONTERMINAL && *(rule_map + (*target).value) != NULL ) {
+        else if ( (rule->value) >= FIRST_NONTERMINAL) {
             printf("HEY2\n");
-
-            SYMBOL *rule1 = *(rule_map + (*target).value);
-            printf("HEY2.1\n");
-            // printf("NE");
-            decompress_helper( (*rule1).next , out); // recursive call
-            target = (*target).next;
+            printf("RULE PLACED AT %d\n", rule->value);
+            // return;
+            SYMBOL *rule1 = *(rule_map + (rule->value));
+            decompress_helper( rule1->next , out); // recursive call
         }
-        else if ((*target).value >= FIRST_NONTERMINAL && *(rule_map + (*target).value) == NULL) {
-            printf("HEY3\n");
-            fputc((*target).value, out);
-
-            target = (*target).next;
-        }
-        else {
-            printf("HEY4");
-            break;
-        }
-    } // end of while loop
-    printf("LLLLLL");
 }
 
 /**
@@ -191,7 +168,8 @@ int decompress(FILE *in, FILE *out) {
     // To be implemented.
 
     unsigned int result;
-    SYMBOL *head_rule;
+    int firsttime = 0;
+    SYMBOL *head_rule = main_rule;
     unsigned int boolean = 0;
     int loops = 0;
     while (1) {
@@ -224,12 +202,16 @@ int decompress(FILE *in, FILE *out) {
         // Check for end of block:
         if (result == 0x84) {
             // From Piazza: "you want to reset everything" between each block
-            printf("END BLOCK");
+            printf("END BLOCK\n");
             // return 0;
-            decompress_helper( main_rule, out );
+            printf("------------------------------------------\n");
+            printf("THIS IS MAIN_NEXT: %x", (main_rule->next)->value);
+            return 0;
+            decompress_helper( (main_rule->next), out );
             // return 0;
 
-
+            // firsttime_terminal = 0;
+            // firsttime_nonterminal = 0;
             boolean = 0;
             init_rules();
             init_symbols();
@@ -241,6 +223,8 @@ int decompress(FILE *in, FILE *out) {
             // Reset so new head rule
             printf(" END RULE\n");
             // printf("DELIMITER lOOP: %d", loops);
+            // firsttime_terminal = 0;
+            // firsttime_nonterminal = 0;
             boolean = 0;
             continue;
         }
@@ -318,26 +302,29 @@ int decompress(FILE *in, FILE *out) {
         if(new_value > 255){
         printf("%x ", new_value);
          }
-         else if(new_value ==10)  printf("[nl] ");
-         else if(new_value ==32) printf("[ws] ");
+         else if(new_value == 10)  printf("\n ");
+         else if(new_value == 32) printf("[ws] ");
          else  printf("%c ", new_value);
         // fputc(new_value, stdout);
         // Piazza: Rule parameters all supposed to be null while reading. Assign after reading.
         if (new_value < FIRST_NONTERMINAL) {
             // make new symbol
-            SYMBOL *newsymb;
-            newsymb = new_symbol(new_value, NULL);
+            SYMBOL *newsymb = new_symbol(new_value, NULL);
             // Connect
-            if ( (*head_rule).prev ) {
-                (*newsymb).prev = (*head_rule).prev;
-                head_rule->prev->next = newsymb;
+            if ( firsttime == 0) {
+                // ONLY HEAD, attach first symbol.
+                newsymb->prev = head_rule;
+                newsymb->next = head_rule;
+                head_rule->next = newsymb;
+                head_rule->prev = newsymb;
+                firsttime = 1;
             }
             else {
-                // only head
-                (*newsymb).prev = head_rule;
-                (*newsymb).next = head_rule;
-                (*head_rule).next = newsymb;
-                (*head_rule).prev = newsymb;
+                // Second, third, fourth... symbol is attached...
+                newsymb->prev = head_rule->prev;
+                newsymb->next = head_rule;
+                (head_rule->prev)->next = newsymb;
+                head_rule->prev = newsymb;
             }
             // return 0;
         }
@@ -345,35 +332,36 @@ int decompress(FILE *in, FILE *out) {
 
             // make new HEAD rule
             SYMBOL *new_rule1 = new_rule(new_value);
-
-            *(rule_map + new_value) = new_rule1; // increments by value and sets it to rule
-                            // SYMBOL *rule1 = *(rule_map) + (*target).value * sizeof(rule_map);
-            add_rule(new_rule1);
-            (*new_rule1).next = new_rule1;
-            (*new_rule1).prev = new_rule1;
-            // add to=
-
             head_rule = new_rule1;
+            *(rule_map + new_value) = new_rule1; // increments by value and sets it to rule
+            add_rule(new_rule1);
+            // add to
+            firsttime = 0;
             boolean = 1;
+            printf("MAIN_RULE: %d\n", (main_rule->value));
+            // return 0;
             // RULE parameter can be used to specify a rule having that nonterminal at its head.
         }
-        else if ( (new_value >= FIRST_NONTERMINAL) && boolean != 0) { // boolean 0 means we already found first rule
+        else if ((new_value >= FIRST_NONTERMINAL) && boolean != 0) { // boolean 0 means we already found first rule
             // there is already a head rule
             SYMBOL *new_rule2;
             new_rule2 = new_symbol(new_value, NULL);
-
             // Connect
-            if ( (*head_rule).prev == head_rule) {
-                (*(*head_rule).prev).next = new_rule2;
-                (*new_rule2).prev = (*head_rule).prev;
+            // if ( (*head_rule).prev == head_rule) {
+            if (firsttime == 0) {
+                // means theres only the head rule made.
+                new_rule2->prev = head_rule;
+                new_rule2->next = head_rule;
+                head_rule->next = new_rule2;
+                head_rule->prev = new_rule2;
+                firsttime = 1;
             }
             else {
-                // means theres only the head rule made.
-                (*new_rule2).prev = head_rule;
-                (*new_rule2).next = head_rule;
-
-                (*head_rule).next = new_rule2;
-                (*head_rule).prev = new_rule2;
+                // Third, fourth, fifth symbol...
+                new_rule2->prev = head_rule->prev;
+                new_rule2->next = head_rule;
+                (head_rule->prev)->next = new_rule2;
+                head_rule->prev = new_rule2;
             }
         }
     } // end of while(1) loop

@@ -46,20 +46,21 @@
  * the list has been reached.
  */
 
+unsigned int check_main_rule; // used to add_rules accordingly.
+
 /**
  * Initializes the rules by setting main_rule to NULL and clearing the rule_map.
  */
 void init_rules(void) {
         // printf("DONE");
     // To be implemented.
-    // if ( (*main_rule).nextr != NULL) {
-        // (*main_rule).nextr = NULL;
-    // }
-    // if ((*main_rule).prevr != NULL) {
-        // (*main_rule).prevr = NULL;
-    // }
-    main_rule = NULL;
+        // main_rule->nextr = NULL;
+        // main_rule->prevr = NULL;
+        // main_rule->next = 0;
+        // main_rule->prev = 0;
+        main_rule = NULL;
     // abort();
+    check_main_rule = 0; // reset to main_rule = null condition for add_rule.
 
     int max = 0;
     // SYMBOL **temp = rule_map;
@@ -111,28 +112,35 @@ SYMBOL *new_rule(int v) {
  * the list; i.e. between main_rule->prevr and main_rule.
  */
 void add_rule(SYMBOL *rule) {
-    // To be implemented.
+    // To be implemented.l
     if (main_rule == NULL) {
         // creating an empty, doubly linked circular list.
+        printf("ONLY ACCESSED ONCE: %x\n", rule->value);
         main_rule = rule;
-        (*main_rule).nextr = main_rule;
-        (*main_rule).prevr = main_rule;
+        main_rule->nextr = main_rule;
+        main_rule->prevr = main_rule;
+        check_main_rule = 1; // set stage
     }
-    else if (main_rule != NULL && (*main_rule).nextr == NULL) { // only main_rule
-        // printf("THIS HAPPENED");
-        (*rule).prevr = main_rule; // new rule's prev is the NOW second to last node
-        (*main_rule).nextr = rule; // Second to last node's next is rule
-        (*rule).nextr = main_rule; // new rule's next is head.
-        (*main_rule).prevr = rule; // main rule's previous is new rule node.
+    else if (check_main_rule == 1) { // only main_rule
+               printf("ONLY ACCESSED MAIN: %x\n", main_rule->value);
+               // return;
+        rule->prevr = main_rule; // new rule's prev is the NOW second to last node
+        // printf("MAIN RULE VALUE2222222");
+        (main_rule->nextr) = rule; // Second to last node's next is rule
+        rule->nextr = main_rule; // new rule's next is head.
+        (main_rule->prevr) = rule; // main rule's previous is new rule node.
+        check_main_rule = 2;
     }
-    else {
+    else if (check_main_rule == 2) {
+        // printf("MAIN RULE VALUE33333333");
+        // return;
         // main_rule is not NULL, insert between main_rule --> prev and main_rule-
          // printf("HEREEEEEEEEEEEE: %p ", (*main_rule).nextr );
-        (*rule).prevr = (*main_rule).prevr; // new rule's prev is the NOW second to last node.
-        (*((*main_rule).prevr)).nextr = rule; // Second to last node's next is rule
-
-        (*rule).nextr = main_rule; // new rule's next is head.
-        (*main_rule).prevr = rule; // main rule's previous is new rule node.
+        rule->prevr = (main_rule->prevr); // new rule's prev is the NOW second to last node.
+        rule->nextr = main_rule; // new rule's next is head.
+        (main_rule->prevr) = rule; // main rule's previous is new rule node.
+        (main_rule->prevr)->nextr = rule; // Second to last node's next is rule
+                // return;
 
         // new rule is inserted at the end of the list.
     }
