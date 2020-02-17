@@ -54,9 +54,7 @@ void init_symbols(void) {
  */
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
     // To be implemented.
-    // SYMBOL newsymbol = *(symbol_storage + num_symbols);
-    // SYMBOL *ptr = &newsymbol;
-    // return ptr;
+
     // first, check if recycled symbols is empty. DONT USE PREV for recycled_symbols
     // CHECK IF TWO MEMBERS IN THE STACK:
     // if ( recycled_list != NULL && (*recycled_list).next != NULL) {
@@ -130,7 +128,6 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     // else
     // printf("numsymbols: %d", num_symbols);
     SYMBOL *symptr = (symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
-    // SYMBOL *symptr = &newsymbol;
     symptr->refcnt = 0; // zeroed
     symptr->next = 0; // zeroed
     symptr->prev = 0; // zeroed

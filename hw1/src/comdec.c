@@ -1,7 +1,6 @@
 #include "const.h"
 #include "sequitur.h"
 #include "debug.h"
-#include "stdio.h"
 
 #ifdef _STRING_H
 #error "Do not #include <string.h>. You will get a ZERO."
@@ -133,9 +132,9 @@ int check_read_amount(unsigned int ch) {
 /**
 * Recursive function to output decompressed data bytes
 */
+int bytes_read = 0;
 int decompress_helper(SYMBOL *rule, FILE *out) {
 
-    int bytes_read = 0;
     SYMBOL *currentptr = rule;
 
     while (currentptr->next != rule) {
@@ -148,7 +147,7 @@ int decompress_helper(SYMBOL *rule, FILE *out) {
         }
         else if ((currentptr->value) >= FIRST_NONTERMINAL) {
             SYMBOL *rule1 = *(rule_map + (currentptr->value));
-            decompress_helper( rule1->next , out); // recursive call
+            decompress_helper( rule1 , out); // recursive call
         }
     }
     return bytes_read;
@@ -230,10 +229,10 @@ int decompress(FILE *in, FILE *out) {
     int firsttime = 0; // to check if head rule has a symbol with it or not
     SYMBOL *head_rule; // CURRENTLY SELECTED RULE
     unsigned int firstrulefound = 0;
+    int amount_bytes = 0;
 
     while (1) {
 
-    // printf("LOOP");
         result = fgetc(in); // unsigned char from fgetc
 
         // Check for start of transmission:
@@ -258,33 +257,13 @@ int decompress(FILE *in, FILE *out) {
         // Check for end of block:
         else if (result == 0x84) {
             // From Piazza: "you want to reset everything" between each block
-            printf("END BLOCK\n");
-            printf("------------------------------------------\n");
-            // printf("THIS IS MAIN_NEXT: %x\n", (main_rule->next)->value);
-
-         printf("\nRULES LINKED LIST:\n");
-         SYMBOL *headptr = main_rule;
-         while(headptr->nextr != main_rule) {
-            printf(" #: %d ", headptr->value);
-            headptr = headptr->nextr;
-         }
-         printf("\nSYMBOLS LINKED LIST IN MAIN RULE:\n");
-         SYMBOL *headptr2 = main_rule;
-         while(headptr2->next != main_rule) {
-            printf(" #: %d ", headptr2->value);
-            headptr2 = headptr2->next;
-         }
-        printf("\n------------------------------------------\n");
-            // return 0;
-            decompress_helper( main_rule, out );
+            amount_bytes = decompress_helper(main_rule, out);
             continue; // go to next iteration
         }
 
         // Rule delimiter
         else if (result == 0x85) {
             // Reset so new head rule
-            // return 0;
-            printf(" END RULE\n");
             firsttime = 0;
             firstrulefound = 0;
             head_rule = NULL;
@@ -292,16 +271,6 @@ int decompress(FILE *in, FILE *out) {
         }
 
         unsigned int new_value = readCharacter(result, in);
-        // ------------------------------------------------------
-        // NOW THEY ALL GO TO THIS:
-        if (new_value > 255) {
-            printf("%x ", new_value);
-            printf("==>");
-        }
-         else if (new_value == 10) printf("\n ");
-         else if (new_value == 32) printf("[ws] ");
-         else printf("%c ", new_value);
-        // ------------------------------------------------------
 
         // Piazza: Rule parameters all supposed to be null while reading. Assign after reading.
         if (new_value < FIRST_NONTERMINAL) {
@@ -323,7 +292,6 @@ int decompress(FILE *in, FILE *out) {
                 newsymb->next = head_rule;
                 head_rule->prev = newsymb;
             }
-            // return 0;
         }
         else if ((new_value >= FIRST_NONTERMINAL) && firstrulefound == 0) { // boolean 0 means first rule not found
             // make new HEAD rule
@@ -355,10 +323,8 @@ int decompress(FILE *in, FILE *out) {
             }
         }
     } // end of while(1) loop
-    printf("\n-----------------------------------\n");
-    printf("OUT OF WHILE LOOP");
     fflush(out); // ensure no output remains buffered in memory.
-    return 0; // file does not follow format
+    return amount_bytes; // file does not follow format
 }
 
 /**
