@@ -133,22 +133,25 @@ int check_read_amount(unsigned int ch) {
 /**
 * Recursive function to output decompressed data bytes
 */
-void decompress_helper(SYMBOL *rule, FILE *out) {
+int decompress_helper(SYMBOL *rule, FILE *out) {
 
-    if (rule->next == rule) return;
+    int bytes_read = 0;
+    SYMBOL *currentptr = rule;
 
-        printf("RULE VALUE: %d\n", (rule->value));
+    while (currentptr->next != rule) {
 
-        if ((rule->value) < FIRST_NONTERMINAL) { // terminal value
-           fputc(rule->value, out);
-           decompress_helper(rule->next, out);
+        currentptr = currentptr->next;
+
+        if ((currentptr->value) < FIRST_NONTERMINAL) { // terminal value
+           fputc(currentptr->value, out);
+           bytes_read++;
         }
-        else if ((rule->value) >= FIRST_NONTERMINAL) {
-            // printf("HEY2\n");
-            // printf("RULE PLACED AT %d\n", rule->value);
-            SYMBOL *rule1 = *(rule_map + (rule->value));
+        else if ((currentptr->value) >= FIRST_NONTERMINAL) {
+            SYMBOL *rule1 = *(rule_map + (currentptr->value));
             decompress_helper( rule1->next , out); // recursive call
         }
+    }
+    return bytes_read;
 }
 
 int readCharacter(unsigned int result, FILE *in) {
@@ -262,13 +265,13 @@ int decompress(FILE *in, FILE *out) {
          printf("\nRULES LINKED LIST:\n");
          SYMBOL *headptr = main_rule;
          while(headptr->nextr != main_rule) {
-            printf(" #: %x ", headptr->value);
+            printf(" #: %d ", headptr->value);
             headptr = headptr->nextr;
          }
          printf("\nSYMBOLS LINKED LIST IN MAIN RULE:\n");
          SYMBOL *headptr2 = main_rule;
          while(headptr2->next != main_rule) {
-            printf(" #: %x ", headptr2->value);
+            printf(" #: %d ", headptr2->value);
             headptr2 = headptr2->next;
          }
         printf("\n------------------------------------------\n");
@@ -329,18 +332,14 @@ int decompress(FILE *in, FILE *out) {
             *(rule_map + head_rule->value) = head_rule; // increments by value and sets it to rule
             firsttime = 0; // if 0, there's only head rule. if 1, theres symbols connected
             firstrulefound = 1;
-            // printf("MAIN RULE");
             // RULE parameter can be used to specify a rule having that nonterminal at its head.
         }
         else if ((new_value >= FIRST_NONTERMINAL) && firstrulefound != 0) { // boolean 0 means we already found first rule
             // there is already a head rule
             SYMBOL *new_rule2 = new_symbol(new_value, NULL);
-            // return 0;
-            // Connect
 
             if (firsttime == 0) {
                 // means theres only the head rule made.
-                // printf("DOING THIS");
                 head_rule->next = new_rule2;
                 new_rule2->prev = head_rule;
                 head_rule->prev = new_rule2;
@@ -349,17 +348,14 @@ int decompress(FILE *in, FILE *out) {
             }
             else {
                 // Third, fourth, fifth symbol...
-                // printf("DOING THIS 2");
-                // printf("ADDRES: %p ", head_rule->prev->next);
-                // return 0;
-                head_rule->prev->next = new_rule2; // THIS IS THE ERROR.
+                head_rule->prev->next = new_rule2;
                 new_rule2->prev = head_rule->prev;
                 head_rule->prev = new_rule2;
                 new_rule2->next = head_rule;
             }
         }
     } // end of while(1) loop
-
+    printf("\n-----------------------------------\n");
     printf("OUT OF WHILE LOOP");
     fflush(out); // ensure no output remains buffered in memory.
     return 0; // file does not follow format
