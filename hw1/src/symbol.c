@@ -59,67 +59,67 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     // return ptr;
     // first, check if recycled symbols is empty. DONT USE PREV for recycled_symbols
     // CHECK IF TWO MEMBERS IN THE STACK:
-    if ( recycled_list != NULL && (*recycled_list).next != NULL) {
-        // its not empty (LIFO REMEMBER);
-        SYMBOL *temp = recycled_list; // made pointer to preserve recycled_list
-        while( (*temp).next != NULL) {
-            temp = temp->next;
-        }
-        // temp refers to last node in recycled_list (LIFO)
-        SYMBOL *allocated_symbol = temp; // used to satisfy the request. removed from recycling list
-        temp--; // go to previous node
-        temp->next = NULL; // deleted last node
+    // if ( recycled_list != NULL && (*recycled_list).next != NULL) {
+    //     // its not empty (LIFO REMEMBER);
+    //     SYMBOL *temp = recycled_list; // made pointer to preserve recycled_list
+    //     while( (*temp).next != NULL) {
+    //         temp = temp->next;
+    //     }
+    //     // temp refers to last node in recycled_list (LIFO)
+    //     SYMBOL *allocated_symbol = temp; // used to satisfy the request. removed from recycling list
+    //     temp--; // go to previous node
+    //     temp->next = NULL; // deleted last node
 
-        (*allocated_symbol).refcnt = 0; // zeroed
-        (*allocated_symbol).next = 0; // zeroed
-        (*allocated_symbol).prev = 0; // zeroed
-        (*allocated_symbol).nextr = 0; // zeroed
-        (*allocated_symbol).prevr = 0; // zeroed
+    //     (*allocated_symbol).refcnt = 0; // zeroed
+    //     (*allocated_symbol).next = 0; // zeroed
+    //     (*allocated_symbol).prev = 0; // zeroed
+    //     (*allocated_symbol).nextr = 0; // zeroed
+    //     (*allocated_symbol).prevr = 0; // zeroed
 
-        if (value < FIRST_NONTERMINAL) {
-            // rule = NULL
-            (*allocated_symbol).rule = NULL;
-            (*allocated_symbol).value = value;
-            return allocated_symbol;
-        }
-        else if (value >= FIRST_NONTERMINAL) {
-            // it is nonterminal
-            // rule is non-NULL
-            if (rule != NULL) {
-                (*allocated_symbol).rule = rule;
-            }
-            (*allocated_symbol).value = value;
-            return allocated_symbol;
-        }
-    }
-    else if (recycled_list != NULL) {
-        // ONLY ONE MEMBER IN STACK. REMOVE AND ITS EMPTY.
-        SYMBOL *allocated_symbol = recycled_list;
-        recycled_list = NULL; // now is empty (removed LIFO)
+    //     if (value < FIRST_NONTERMINAL) {
+    //         // rule = NULL
+    //         (*allocated_symbol).rule = NULL;
+    //         (*allocated_symbol).value = value;
+    //         return allocated_symbol;
+    //     }
+    //     else if (value >= FIRST_NONTERMINAL) {
+    //         // it is nonterminal
+    //         // rule is non-NULL
+    //         if (rule != NULL) {
+    //             (*allocated_symbol).rule = rule;
+    //         }
+    //         (*allocated_symbol).value = value;
+    //         return allocated_symbol;
+    //     }
+    // }
+    // else if (recycled_list != NULL) {
+    //     // ONLY ONE MEMBER IN STACK. REMOVE AND ITS EMPTY.
+    //     SYMBOL *allocated_symbol = recycled_list;
+    //     recycled_list = NULL; // now is empty (removed LIFO)
 
-        (*allocated_symbol).refcnt = 0; // zeroed
-        (*allocated_symbol).next = 0; // zeroed
-        (*allocated_symbol).prev = 0; // zeroed
-        (*allocated_symbol).nextr = 0; // zeroed
-        (*allocated_symbol).prevr = 0; // zeroed
+    //     (*allocated_symbol).refcnt = 0; // zeroed
+    //     (*allocated_symbol).next = 0; // zeroed
+    //     (*allocated_symbol).prev = 0; // zeroed
+    //     (*allocated_symbol).nextr = 0; // zeroed
+    //     (*allocated_symbol).prevr = 0; // zeroed
 
-        if (value < FIRST_NONTERMINAL) {
-            // rule = NULL
-            (*allocated_symbol).rule = NULL;
-            (*allocated_symbol).value = value;
-            return allocated_symbol;
-        }
-        else if (value >= FIRST_NONTERMINAL) {
-            // it is nonterminal
-            // rule is non-NULL
-            if (rule != NULL) {
-                (*allocated_symbol).rule = NULL;
-            }
-            (*allocated_symbol).value = value;
-            return allocated_symbol;
-        }
-    }
-    else {
+    //     if (value < FIRST_NONTERMINAL) {
+    //         // rule = NULL
+    //         (*allocated_symbol).rule = NULL;
+    //         (*allocated_symbol).value = value;
+    //         return allocated_symbol;
+    //     }
+    //     else if (value >= FIRST_NONTERMINAL) {
+    //         // it is nonterminal
+    //         // rule is non-NULL
+    //         if (rule != NULL) {
+    //             (*allocated_symbol).rule = NULL;
+    //         }
+    //         (*allocated_symbol).value = value;
+    //         return allocated_symbol;
+    //     }
+    // }
+    // else {
     // recycled_list == NULL
         // check if storage is full
         if (num_symbols >= MAX_SYMBOLS) {
@@ -129,8 +129,8 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         }
     // else
     // printf("numsymbols: %d", num_symbols);
-    SYMBOL newsymbol = *(symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
-    SYMBOL *symptr = &newsymbol;
+    SYMBOL *symptr = (symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
+    // SYMBOL *symptr = &newsymbol;
     symptr->refcnt = 0; // zeroed
     symptr->next = 0; // zeroed
     symptr->prev = 0; // zeroed
@@ -139,12 +139,11 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     symptr->rule = NULL;
     symptr->value = value;
 
-    *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
+    // *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
     num_symbols++; // increment num_symbols global variable.
     // printf("THIS VALUE: %d", symptr->value);
     return symptr;
-}
-    return NULL;
+// }
 }
 
 /**

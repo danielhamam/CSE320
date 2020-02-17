@@ -135,15 +135,15 @@ int check_read_amount(unsigned int ch) {
 */
 void decompress_helper(SYMBOL *rule, FILE *out) {
 
-    if (rule == NULL) return;
+    if (rule->next == rule) return;
 
         printf("RULE VALUE: %d\n", (rule->value));
 
-        if ( (rule->value) < FIRST_NONTERMINAL) { // terminal value
+        if ((rule->value) < FIRST_NONTERMINAL) { // terminal value
            fputc(rule->value, out);
            decompress_helper(rule->next, out);
         }
-        else if ( (rule->value) >= FIRST_NONTERMINAL) {
+        else if ((rule->value) >= FIRST_NONTERMINAL) {
             // printf("HEY2\n");
             // printf("RULE PLACED AT %d\n", rule->value);
             SYMBOL *rule1 = *(rule_map + (rule->value));
@@ -223,13 +223,14 @@ int readCharacter(unsigned int result, FILE *in) {
 int decompress(FILE *in, FILE *out) {
     // To be implemented.
 
-    unsigned int result;
+    unsigned int result = 0;
     int firsttime = 0; // to check if head rule has a symbol with it or not
     SYMBOL *head_rule; // CURRENTLY SELECTED RULE
-    unsigned int boolean = 0;
+    unsigned int firstrulefound = 0;
 
     while (1) {
 
+    // printf("LOOP");
         result = fgetc(in); // unsigned char from fgetc
 
         // Check for start of transmission:
@@ -244,7 +245,8 @@ int decompress(FILE *in, FILE *out) {
 
         // Check for start of block:
         else if (result == 0x83) {
-            boolean = 0; // reset head_rule
+            firstrulefound = 0; // reset head_rule
+            firsttime = 0;
             init_rules();
             init_symbols();
             continue; // go to next iteration
@@ -256,6 +258,20 @@ int decompress(FILE *in, FILE *out) {
             printf("END BLOCK\n");
             printf("------------------------------------------\n");
             // printf("THIS IS MAIN_NEXT: %x\n", (main_rule->next)->value);
+
+         printf("\nRULES LINKED LIST:\n");
+         SYMBOL *headptr = main_rule;
+         while(headptr->nextr != main_rule) {
+            printf(" #: %x ", headptr->value);
+            headptr = headptr->nextr;
+         }
+         printf("\nSYMBOLS LINKED LIST IN MAIN RULE:\n");
+         SYMBOL *headptr2 = main_rule;
+         while(headptr2->next != main_rule) {
+            printf(" #: %x ", headptr2->value);
+            headptr2 = headptr2->next;
+         }
+        printf("\n------------------------------------------\n");
             // return 0;
             decompress_helper( main_rule, out );
             continue; // go to next iteration
@@ -267,7 +283,7 @@ int decompress(FILE *in, FILE *out) {
             // return 0;
             printf(" END RULE\n");
             firsttime = 0;
-            boolean = 0;
+            firstrulefound = 0;
             head_rule = NULL;
             continue;
         }
@@ -283,14 +299,6 @@ int decompress(FILE *in, FILE *out) {
          else if (new_value == 32) printf("[ws] ");
          else printf("%c ", new_value);
         // ------------------------------------------------------
-         SYMBOL *head_rule1 = head_rule;
-         SYMBOL *head_rule2 = head_rule;
-         printf("\nLINKED LIST:\n");
-         while(head_rule1 != head_rule2) {
-            printf(" %x ", head_rule1->value);
-            head_rule1 = head_rule1->next;
-         }
-
 
         // Piazza: Rule parameters all supposed to be null while reading. Assign after reading.
         if (new_value < FIRST_NONTERMINAL) {
@@ -307,31 +315,32 @@ int decompress(FILE *in, FILE *out) {
             }
             else {
                 // Second, third, fourth... symbol is attached...
-                head_rule->prev->next = newsymb;
+                head_rule->prev->next = newsymb; // THE ERROR
                 newsymb->prev = head_rule->prev;
                 newsymb->next = head_rule;
                 head_rule->prev = newsymb;
             }
             // return 0;
         }
-        else if ((new_value >= FIRST_NONTERMINAL) && boolean == 0) { // boolean 0 means first rule not found
+        else if ((new_value >= FIRST_NONTERMINAL) && firstrulefound == 0) { // boolean 0 means first rule not found
             // make new HEAD rule
             head_rule = new_rule(new_value);
             add_rule(head_rule);
             *(rule_map + head_rule->value) = head_rule; // increments by value and sets it to rule
             firsttime = 0; // if 0, there's only head rule. if 1, theres symbols connected
-            boolean = 1;
-            printf("MAIN RULE");
+            firstrulefound = 1;
+            // printf("MAIN RULE");
             // RULE parameter can be used to specify a rule having that nonterminal at its head.
         }
-        else if ((new_value >= FIRST_NONTERMINAL) && boolean != 0) { // boolean 0 means we already found first rule
+        else if ((new_value >= FIRST_NONTERMINAL) && firstrulefound != 0) { // boolean 0 means we already found first rule
             // there is already a head rule
             SYMBOL *new_rule2 = new_symbol(new_value, NULL);
             // return 0;
             // Connect
+
             if (firsttime == 0) {
                 // means theres only the head rule made.
-                printf("DOING THIS");
+                // printf("DOING THIS");
                 head_rule->next = new_rule2;
                 new_rule2->prev = head_rule;
                 head_rule->prev = new_rule2;
@@ -340,9 +349,9 @@ int decompress(FILE *in, FILE *out) {
             }
             else {
                 // Third, fourth, fifth symbol...
-                printf("DOING THIS 2");
+                // printf("DOING THIS 2");
                 // printf("ADDRES: %p ", head_rule->prev->next);
-                return 0;
+                // return 0;
                 head_rule->prev->next = new_rule2; // THIS IS THE ERROR.
                 new_rule2->prev = head_rule->prev;
                 head_rule->prev = new_rule2;

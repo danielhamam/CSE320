@@ -107,11 +107,10 @@ void add_rule(SYMBOL *rule) {
         main_rule = rule;
         main_rule->nextr = main_rule;
         main_rule->prevr = main_rule;
-        // printf("MAIN_RULE_1st_VALUE %x\n", main_rule->value);
     }
     else {
-        // new rule is inserted at the end of the list. 2 or more
-        main_rule->prevr->nextr = rule; // Second to last node's next is rule
+        // new rule is inserted at the end of the list. 2 or
+        main_rule->prevr->nextr = rule; // Second to last node's next is rule (ERROR)
         rule->nextr = main_rule; // new rule's next is head.
         rule->prevr = main_rule->prevr; // new rule's prev is the NOW second to last node.
         main_rule->prevr = rule; // main rule's previous is new rule node.
