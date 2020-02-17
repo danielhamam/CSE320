@@ -130,14 +130,15 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     // else
     // printf("numsymbols: %d", num_symbols);
     SYMBOL newsymbol = *(symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
-    newsymbol.refcnt = 0; // zeroed
-    newsymbol.next = 0; // zeroed
-    newsymbol.prev = 0; // zeroed
-    newsymbol.nextr = 0; // zeroed
-    newsymbol.prevr = 0; // zeroed
-    newsymbol.rule = NULL;
-    newsymbol.value = value;
     SYMBOL *symptr = &newsymbol;
+    symptr->refcnt = 0; // zeroed
+    symptr->next = 0; // zeroed
+    symptr->prev = 0; // zeroed
+    symptr->nextr = 0; // zeroed
+    symptr->prevr = 0; // zeroed
+    symptr->rule = NULL;
+    symptr->value = value;
+
     *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
     num_symbols++; // increment num_symbols global variable.
     // printf("THIS VALUE: %d", symptr->value);

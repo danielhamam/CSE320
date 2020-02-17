@@ -135,117 +135,35 @@ int check_read_amount(unsigned int ch) {
 */
 void decompress_helper(SYMBOL *rule, FILE *out) {
 
-    if (rule->next == NULL) return;
+    if (rule == NULL) return;
 
-        printf("THIS: %d\n", (rule->value)) ;
-        printf("TARGET: %p\n", rule);
-        printf("NEXT: %p\n", rule->next);
+        printf("RULE VALUE: %d\n", (rule->value));
 
         if ( (rule->value) < FIRST_NONTERMINAL) { // terminal value
            fputc(rule->value, out);
            decompress_helper(rule->next, out);
         }
         else if ( (rule->value) >= FIRST_NONTERMINAL) {
-            printf("HEY2\n");
-            printf("RULE PLACED AT %d\n", rule->value);
-            // return;
+            // printf("HEY2\n");
+            // printf("RULE PLACED AT %d\n", rule->value);
             SYMBOL *rule1 = *(rule_map + (rule->value));
             decompress_helper( rule1->next , out); // recursive call
         }
 }
 
-/**
- * Main decompression function.
- * Reads a compressed data transmission from an input stream, expands it,
- * and and writes the resulting decompressed data to an output stream.
- * The output stream is flushed once writing is complete.
- *
- * @param in  The stream from which the compressed block is to be read.
- * @param out  The stream to which the uncompressed data is to be written.
- * @return  The number of bytes written, in case of success, otherwise EOF.
- */
-int decompress(FILE *in, FILE *out) {
-    // To be implemented.
+int readCharacter(unsigned int result, FILE *in) {
 
-    unsigned int result;
-    int firsttime = 0;
-    SYMBOL *head_rule = main_rule;
-    unsigned int boolean = 0;
-    int loops = 0;
-    while (1) {
-
-        // printf(" %x ", result);
-        // printf("LOOP : %d", loops);
-
-        result = fgetc(in); // unsigned char from fgetc
-        loops++;
-
-        // Check for start of transmission:
-        if (result == 0x81) {
-            init_rules();
-            init_symbols();
-            continue;
-        }
-
-        // Check for end of transmission:
-        if (result == 0x82) { // check if it is END OF FILE MARKER.
-            // printf("WE DONE");
-            break;
-        }
-
-        // Check for start of block:
-        if (result == 0x83) {
-            // printf("START BLOCK");
-            continue; // go to next iteration
-        }
-
-        // Check for end of block:
-        if (result == 0x84) {
-            // From Piazza: "you want to reset everything" between each block
-            printf("END BLOCK\n");
-            // return 0;
-            printf("------------------------------------------\n");
-            printf("THIS IS MAIN_NEXT: %x", (main_rule->next)->value);
-            return 0;
-            decompress_helper( (main_rule->next), out );
-            // return 0;
-
-            // firsttime_terminal = 0;
-            // firsttime_nonterminal = 0;
-            boolean = 0;
-            init_rules();
-            init_symbols();
-            continue; // go to next iteration
-        }
-
-        // Rule delimiter
-        if (result == 0x85) {
-            // Reset so new head rule
-            printf(" END RULE\n");
-            // printf("DELIMITER lOOP: %d", loops);
-            // firsttime_terminal = 0;
-            // firsttime_nonterminal = 0;
-            boolean = 0;
-            continue;
-        }
-
-        // else:
-        // printf(" | RESULT IS %x | ", result);
         int read_amount = check_read_amount(result); // gives us how many bytes we have to read for character
-        unsigned int new_value = 0;
-
-        // printf("READ AMOUNT: %d", read_amount);
-        // remember to take off 10 (first two bits) off the next two
-
-        unsigned int results_together = 0;
+        int new_value = 0;
+        int results_together = 0;
         if (read_amount == 1) {
+
             result = (result & 0b01111111); // get rid of first zero;
             new_value = result;
-            // printf("KEY1");
             // now you have the binary code of the character.
         }
         else if (read_amount == 2) {
-            // printf("KEY2");
+
             result = (result & 0b00011111);  // remove 110
             unsigned int result2 = fgetc(in);
             result2 = (result2 & 0b00111111); // remove the first two bytes 10
@@ -256,13 +174,12 @@ int decompress(FILE *in, FILE *out) {
             new_value = results_together;
         }
         else if (read_amount == 3) {
-            // printf("KEY3");
+
             result = (result & 0b00001111); // remove 1110
             unsigned int result2 = fgetc(in); // next byte #2
             result2 = (result2 & 0b00111111);
             unsigned int result3 = fgetc(in); // next byte #3
             result3 = (result3 & 0b00111111);
-
             // combine into one binary number
             results_together = results_together | result;
             results_together = results_together << 6;
@@ -272,8 +189,7 @@ int decompress(FILE *in, FILE *out) {
             new_value = results_together;
         }
         else if (read_amount == 4) {
-            // printf("KEY4");
-            // return 0;
+
             result = (result & 0b00000111); // remove 11110
             unsigned int result2 = fgetc(in); // next byte #2
             result2 = (result2 & 0b00111111);
@@ -291,85 +207,153 @@ int decompress(FILE *in, FILE *out) {
             results_together = results_together | result4;
             new_value = results_together;
         }
-        else {
-            // printf("DOESNT FIT CRITERIA");
-            return 0;
+        return new_value;
+}
+
+/**
+ * Main decompression function.
+ * Reads a compressed data transmission from an input stream, expands it,
+ * and and writes the resulting decompressed data to an output stream.
+ * The output stream is flushed once writing is complete.
+ *
+ * @param in  The stream from which the compressed block is to be read.
+ * @param out  The stream to which the uncompressed data is to be written.
+ * @return  The number of bytes written, in case of success, otherwise EOF.
+ */
+int decompress(FILE *in, FILE *out) {
+    // To be implemented.
+
+    unsigned int result;
+    int firsttime = 0; // to check if head rule has a symbol with it or not
+    SYMBOL *head_rule; // CURRENTLY SELECTED RULE
+    unsigned int boolean = 0;
+
+    while (1) {
+
+        result = fgetc(in); // unsigned char from fgetc
+
+        // Check for start of transmission:
+        if (result == 0x81) {
+            continue;
         }
 
-        // printf("SYMBOL IS: %d ", new_value);
+        // Check for end of transmission:
+        else if (result == 0x82) { // check if it is END OF FILE MARKER.
+            break;
+        }
 
+        // Check for start of block:
+        else if (result == 0x83) {
+            boolean = 0; // reset head_rule
+            init_rules();
+            init_symbols();
+            continue; // go to next iteration
+        }
+
+        // Check for end of block:
+        else if (result == 0x84) {
+            // From Piazza: "you want to reset everything" between each block
+            printf("END BLOCK\n");
+            printf("------------------------------------------\n");
+            // printf("THIS IS MAIN_NEXT: %x\n", (main_rule->next)->value);
+            // return 0;
+            decompress_helper( main_rule, out );
+            continue; // go to next iteration
+        }
+
+        // Rule delimiter
+        else if (result == 0x85) {
+            // Reset so new head rule
+            // return 0;
+            printf(" END RULE\n");
+            firsttime = 0;
+            boolean = 0;
+            head_rule = NULL;
+            continue;
+        }
+
+        unsigned int new_value = readCharacter(result, in);
+        // ------------------------------------------------------
         // NOW THEY ALL GO TO THIS:
-        if(new_value > 255){
-        printf("%x ", new_value);
+        if (new_value > 255) {
+            printf("%x ", new_value);
+            printf("==>");
+        }
+         else if (new_value == 10) printf("\n ");
+         else if (new_value == 32) printf("[ws] ");
+         else printf("%c ", new_value);
+        // ------------------------------------------------------
+         SYMBOL *head_rule1 = head_rule;
+         SYMBOL *head_rule2 = head_rule;
+         printf("\nLINKED LIST:\n");
+         while(head_rule1 != head_rule2) {
+            printf(" %x ", head_rule1->value);
+            head_rule1 = head_rule1->next;
          }
-         else if(new_value == 10)  printf("\n ");
-         else if(new_value == 32) printf("[ws] ");
-         else  printf("%c ", new_value);
-        // fputc(new_value, stdout);
+
+
         // Piazza: Rule parameters all supposed to be null while reading. Assign after reading.
         if (new_value < FIRST_NONTERMINAL) {
             // make new symbol
             SYMBOL *newsymb = new_symbol(new_value, NULL);
             // Connect
-            if ( firsttime == 0) {
+            if (firsttime == 0) {
                 // ONLY HEAD, attach first symbol.
-                newsymb->prev = head_rule;
-                newsymb->next = head_rule;
                 head_rule->next = newsymb;
+                newsymb->prev = head_rule;
                 head_rule->prev = newsymb;
+                newsymb->next = head_rule;
                 firsttime = 1;
             }
             else {
                 // Second, third, fourth... symbol is attached...
+                head_rule->prev->next = newsymb;
                 newsymb->prev = head_rule->prev;
                 newsymb->next = head_rule;
-                (head_rule->prev)->next = newsymb;
                 head_rule->prev = newsymb;
             }
             // return 0;
         }
-        else if ( (new_value >= FIRST_NONTERMINAL) && boolean == 0) { // boolean 0 means first rule not found
-
+        else if ((new_value >= FIRST_NONTERMINAL) && boolean == 0) { // boolean 0 means first rule not found
             // make new HEAD rule
-            SYMBOL *new_rule1 = new_rule(new_value);
-            head_rule = new_rule1;
-            *(rule_map + new_value) = new_rule1; // increments by value and sets it to rule
-            add_rule(new_rule1);
-            // add to
-            firsttime = 0;
+            head_rule = new_rule(new_value);
+            add_rule(head_rule);
+            *(rule_map + head_rule->value) = head_rule; // increments by value and sets it to rule
+            firsttime = 0; // if 0, there's only head rule. if 1, theres symbols connected
             boolean = 1;
-            printf("MAIN_RULE: %d\n", (main_rule->value));
-            // return 0;
+            printf("MAIN RULE");
             // RULE parameter can be used to specify a rule having that nonterminal at its head.
         }
         else if ((new_value >= FIRST_NONTERMINAL) && boolean != 0) { // boolean 0 means we already found first rule
             // there is already a head rule
-            SYMBOL *new_rule2;
-            new_rule2 = new_symbol(new_value, NULL);
+            SYMBOL *new_rule2 = new_symbol(new_value, NULL);
+            // return 0;
             // Connect
-            // if ( (*head_rule).prev == head_rule) {
             if (firsttime == 0) {
                 // means theres only the head rule made.
-                new_rule2->prev = head_rule;
-                new_rule2->next = head_rule;
+                printf("DOING THIS");
                 head_rule->next = new_rule2;
+                new_rule2->prev = head_rule;
                 head_rule->prev = new_rule2;
+                new_rule2->next = head_rule;
                 firsttime = 1;
             }
             else {
                 // Third, fourth, fifth symbol...
+                printf("DOING THIS 2");
+                // printf("ADDRES: %p ", head_rule->prev->next);
+                return 0;
+                head_rule->prev->next = new_rule2; // THIS IS THE ERROR.
                 new_rule2->prev = head_rule->prev;
-                new_rule2->next = head_rule;
-                (head_rule->prev)->next = new_rule2;
                 head_rule->prev = new_rule2;
+                new_rule2->next = head_rule;
             }
         }
     } // end of while(1) loop
-    // Now that we have all the symbols from main_rule, use rules to perform expansion
-    // printf("OUT OF WHILE LOOP");
-    // return 0;
+
+    printf("OUT OF WHILE LOOP");
     fflush(out); // ensure no output remains buffered in memory.
-    return EOF; // file does not follow format
+    return 0; // file does not follow format
 }
 
 /**
