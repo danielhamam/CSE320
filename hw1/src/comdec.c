@@ -156,7 +156,6 @@ int compress(FILE *in, FILE *out, int bsize) {
 
         result = fgetc(in);
         printf("result %c", result);
-        return 0;
 
         // Start of Transmission
         if (result == 0x81) {
@@ -190,6 +189,7 @@ int compress(FILE *in, FILE *out, int bsize) {
         while(readBytes < bsize) {
 
             SYMBOL *newsym = new_symbol(result, NULL); // NULL because non-terminal
+            return 0;
             insert_newsymbol(newsym);
             check_digram(main_rule->prev->prev);
 

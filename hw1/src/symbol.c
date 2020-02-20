@@ -13,9 +13,6 @@
  */
 int next_nonterminal_value = FIRST_NONTERMINAL;
 
-// RECYCLED_LIST
-SYMBOL *recycled_list;
-
 /**
  * Initialize the symbols module.
  * Frees all symbols, setting num_symbols to 0, and resets next_nonterminal_value
@@ -51,36 +48,41 @@ void init_symbols(void) {
  * the main symbol_storage array and the num_symbols variable is incremented to record the
  * allocation.
  */
+
+// RECYCLED_LIST
+SYMBOL *recycled_list;
+
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
 
     SYMBOL *symptr = NULL;
 
-    // if ( recycled_list->next != NULL ) { // not empty
-    //     symptr = recycled_list; // last symbol in recycled_list
-    //     recycled_list = recycled_list->prev; // take off last symbol on the list.
+    if ( recycled_list != NULL ) { // not empty
+        symptr = recycled_list; // last symbol in recycled_list
 
-    //     symptr->refcnt = 0; // zeroed
-    //     symptr->next = 0; // zeroed
-    //     symptr->prev = 0; // zeroed
-    //     symptr->nextr = 0; // zeroed
-    //     symptr->prevr = 0; // zeroed
+        recycled_list = recycled_list->prev; // take off last symbol on the list.
 
-    //     if (value < FIRST_NONTERMINAL) {
-    //         // rule = NULL
-    //         symptr->rule = NULL;
-    //         symptr->value = value;
-    //         return symptr;
-    //     }
-    //     else if (value >= FIRST_NONTERMINAL) { // non-terminal
+        symptr->refcnt = 0; // zeroed
+        symptr->next = 0; // zeroed
+        symptr->prev = 0; // zeroed
+        symptr->nextr = 0; // zeroed
+        symptr->prevr = 0; // zeroed
 
-    //         if (rule != NULL) {
-    //            symptr->rule = rule; // rule is non-NULL
-    //         }
-    //         symptr->value = value;
-    //         return symptr;
-    //     }
-    // }
-    // else {
+        if (value < FIRST_NONTERMINAL) {
+            // rule = NULL
+            symptr->rule = NULL;
+            symptr->value = value;
+            return symptr;
+        }
+        else if (value >= FIRST_NONTERMINAL) { // non-terminal
+
+            if (rule != NULL) {
+               symptr->rule = rule; // rule is non-NULL
+            }
+            symptr->value = value;
+            return symptr;
+        }
+    }
+    else {
         // check if storage is full
         if (num_symbols >= MAX_SYMBOLS) {
             // issue a message to stderr and abort.
@@ -98,10 +100,8 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         symptr->rule = NULL;
         symptr->value = value;
 
-        // *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
-        num_symbols++; // increment num_symbols global variable.
-        // printf("THIS VALUE: %d", symptr->value);
-        // }
+        num_symbols++; // increment num_symbols global variable
+    }
     return symptr;
 }
 
@@ -119,6 +119,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
 void recycle_symbol(SYMBOL *s) {
     // Add to beginning of list.
     recycled_list->next = s;
+    s->prev = recycled_list;
     recycled_list = recycled_list->next;
 
     // // Num_symbols lower.
