@@ -25,16 +25,14 @@ int main(int argc, char **argv)
     if (global_options & 1)
         USAGE(*argv, EXIT_SUCCESS);
 
-    char **temp_double = argv;
-    temp_double++;
-    char *d_pointer = *temp_double;
-    char dash = *d_pointer;
-    d_pointer++; // go to second position
-    char d = *d_pointer;
-    if (dash == '-' && d == 'd') {
-        // printf("%c", dash);
-        // printf("%c", d);
+    int verify_decompress = global_options & 4;
+    if (verify_decompress == 4) {
         decompress(stdin, stdout);
+    }
+
+    int verify_compress = global_options & 2;
+    if (verify_compress == 2) {
+        compress(stdin, stdout, 1024);
     }
 
     return EXIT_SUCCESS;

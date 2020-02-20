@@ -16,7 +16,6 @@ int next_nonterminal_value = FIRST_NONTERMINAL;
 // RECYCLED_LIST
 SYMBOL *recycled_list;
 
-
 /**
  * Initialize the symbols module.
  * Frees all symbols, setting num_symbols to 0, and resets next_nonterminal_value
@@ -53,94 +52,57 @@ void init_symbols(void) {
  * allocation.
  */
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
-    // To be implemented.
 
-    // first, check if recycled symbols is empty. DONT USE PREV for recycled_symbols
-    // CHECK IF TWO MEMBERS IN THE STACK:
-    // if ( recycled_list != NULL && (*recycled_list).next != NULL) {
-    //     // its not empty (LIFO REMEMBER);
-    //     SYMBOL *temp = recycled_list; // made pointer to preserve recycled_list
-    //     while( (*temp).next != NULL) {
-    //         temp = temp->next;
-    //     }
-    //     // temp refers to last node in recycled_list (LIFO)
-    //     SYMBOL *allocated_symbol = temp; // used to satisfy the request. removed from recycling list
-    //     temp--; // go to previous node
-    //     temp->next = NULL; // deleted last node
+    SYMBOL *symptr = NULL;
 
-    //     (*allocated_symbol).refcnt = 0; // zeroed
-    //     (*allocated_symbol).next = 0; // zeroed
-    //     (*allocated_symbol).prev = 0; // zeroed
-    //     (*allocated_symbol).nextr = 0; // zeroed
-    //     (*allocated_symbol).prevr = 0; // zeroed
+    // if ( recycled_list->next != NULL ) { // not empty
+    //     symptr = recycled_list; // last symbol in recycled_list
+    //     recycled_list = recycled_list->prev; // take off last symbol on the list.
+
+    //     symptr->refcnt = 0; // zeroed
+    //     symptr->next = 0; // zeroed
+    //     symptr->prev = 0; // zeroed
+    //     symptr->nextr = 0; // zeroed
+    //     symptr->prevr = 0; // zeroed
 
     //     if (value < FIRST_NONTERMINAL) {
     //         // rule = NULL
-    //         (*allocated_symbol).rule = NULL;
-    //         (*allocated_symbol).value = value;
-    //         return allocated_symbol;
+    //         symptr->rule = NULL;
+    //         symptr->value = value;
+    //         return symptr;
     //     }
-    //     else if (value >= FIRST_NONTERMINAL) {
-    //         // it is nonterminal
-    //         // rule is non-NULL
-    //         if (rule != NULL) {
-    //             (*allocated_symbol).rule = rule;
-    //         }
-    //         (*allocated_symbol).value = value;
-    //         return allocated_symbol;
-    //     }
-    // }
-    // else if (recycled_list != NULL) {
-    //     // ONLY ONE MEMBER IN STACK. REMOVE AND ITS EMPTY.
-    //     SYMBOL *allocated_symbol = recycled_list;
-    //     recycled_list = NULL; // now is empty (removed LIFO)
+    //     else if (value >= FIRST_NONTERMINAL) { // non-terminal
 
-    //     (*allocated_symbol).refcnt = 0; // zeroed
-    //     (*allocated_symbol).next = 0; // zeroed
-    //     (*allocated_symbol).prev = 0; // zeroed
-    //     (*allocated_symbol).nextr = 0; // zeroed
-    //     (*allocated_symbol).prevr = 0; // zeroed
-
-    //     if (value < FIRST_NONTERMINAL) {
-    //         // rule = NULL
-    //         (*allocated_symbol).rule = NULL;
-    //         (*allocated_symbol).value = value;
-    //         return allocated_symbol;
-    //     }
-    //     else if (value >= FIRST_NONTERMINAL) {
-    //         // it is nonterminal
-    //         // rule is non-NULL
     //         if (rule != NULL) {
-    //             (*allocated_symbol).rule = NULL;
+    //            symptr->rule = rule; // rule is non-NULL
     //         }
-    //         (*allocated_symbol).value = value;
-    //         return allocated_symbol;
+    //         symptr->value = value;
+    //         return symptr;
     //     }
     // }
     // else {
-    // recycled_list == NULL
         // check if storage is full
         if (num_symbols >= MAX_SYMBOLS) {
             // issue a message to stderr and abort.
             fprintf(stderr, "Symbol storage is exhausted! Can not create new symbol.");
             abort();
         }
-    // else
-    // printf("numsymbols: %d", num_symbols);
-    SYMBOL *symptr = (symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
-    symptr->refcnt = 0; // zeroed
-    symptr->next = 0; // zeroed
-    symptr->prev = 0; // zeroed
-    symptr->nextr = 0; // zeroed
-    symptr->prevr = 0; // zeroed
-    symptr->rule = NULL;
-    symptr->value = value;
+        // else
+        // printf("numsymbols: %d", num_symbols);
+        symptr = (symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
+        symptr->refcnt = 0; // zeroed
+        symptr->next = 0; // zeroed
+        symptr->prev = 0; // zeroed
+        symptr->nextr = 0; // zeroed
+        symptr->prevr = 0; // zeroed
+        symptr->rule = NULL;
+        symptr->value = value;
 
-    // *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
-    num_symbols++; // increment num_symbols global variable.
-    // printf("THIS VALUE: %d", symptr->value);
+        // *(symbol_storage + num_symbols) = newsymbol; // move this symbol into the array.
+        num_symbols++; // increment num_symbols global variable.
+        // printf("THIS VALUE: %d", symptr->value);
+        // }
     return symptr;
-// }
 }
 
 /**
@@ -156,8 +118,8 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
  */
 void recycle_symbol(SYMBOL *s) {
     // Add to beginning of list.
-    (*s).next = (recycled_list); // now it is the head of recycled_list
-    recycled_list = s; // switch to now this being head.
+    recycled_list->next = s;
+    recycled_list = recycled_list->next;
 
     // // Num_symbols lower.
     // num_symbols--;

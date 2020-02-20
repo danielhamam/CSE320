@@ -14,6 +14,11 @@
  */
 void init_digram_hash(void) {
     // To be implemented.
+    int index = 0;
+    while (index != MAX_DIGRAMS) {
+        *(digram_table + index) = NULL;
+        index++;
+    }
 }
 
 /**
@@ -26,7 +31,19 @@ void init_digram_hash(void) {
  */
 SYMBOL *digram_get(int v1, int v2) {
     // To be implemented.
-    return NULL;
+    int original = DIGRAM_HASH(v1, v2);
+    int index = original + 1;
+    while (index != original) {
+        SYMBOL *found_digram = *(digram_table + index);
+        if ( found_digram->value == v1 && found_digram->next->value == v2) {
+            return found_digram;
+        }
+        else if (index == MAX_DIGRAMS) {
+            index = 0;
+        }
+        index++;
+    }
+    return NULL; // did not find
 }
 
 /**
@@ -51,7 +68,21 @@ SYMBOL *digram_get(int v1, int v2) {
  */
 int digram_delete(SYMBOL *digram) {
     // To be implemented.
-    return -1;
+    int original = DIGRAM_HASH(digram->value, digram->next->value);
+    int index = original + 1;
+
+    while (index != original) {
+        SYMBOL *found_digram = *(digram_table + index);
+        if (found_digram == digram && found_digram->next == digram->next) {
+            // we now found it, so delete:
+            *(digram_table + index) = TOMBSTONE;
+        }
+        else if (index == MAX_DIGRAMS) {
+            index = 0;
+        }
+        index++;
+    }
+    return -1; // digram did not exist in the table.
 }
 
 /**
@@ -64,6 +95,31 @@ int digram_delete(SYMBOL *digram) {
  * table being full or the given digram not being well-formed.
  */
 int digram_put(SYMBOL *digram) {
-    // To be implemented.
-    return -1;
+     // To be implemented.
+    int original = DIGRAM_HASH(digram->value, digram->next->value);
+    int index = original + 1;
+
+    // First, check if it exists:
+    while (index != original) {
+        SYMBOL *found_digram = *(digram_table + index);
+        if (found_digram == digram && found_digram->next == digram->next) {
+            return 1; // a matching digram already existed in the table and no change was made.
+        }
+        else if (index == MAX_DIGRAMS) {
+            index = 0;
+        }
+        index++;
+    }
+
+    // Second, we can insert into table (because not found previously)
+    index = original + 1;
+    while (index != original) {
+        SYMBOL *found_digram = *(digram_table + index);
+        if (found_digram == NULL) {
+            *(digram_table + index) = digram;
+            return 0; // did not previoiusly exist in the table and insertion was successful.
+        }
+    }
+
+    return -1; // digram did not exist in the table.
 }

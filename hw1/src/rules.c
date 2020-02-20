@@ -114,7 +114,6 @@ void add_rule(SYMBOL *rule) {
         rule->nextr = main_rule; // new rule's next is head.
         rule->prevr = main_rule->prevr; // new rule's prev is the NOW second to last node.
         main_rule->prevr = rule; // main rule's previous is new rule node.
-        // printf("MAIN_RULE_3rd_VALUE %x\n", main_rule->value);
     }
 }
 
@@ -132,19 +131,25 @@ void add_rule(SYMBOL *rule) {
 void delete_rule(SYMBOL *rule) {
     // To be implemented.
 
-    // change the connections
-    (*(*rule).prev).next = (*rule).next;
-    (*(*rule).next).prev = (*rule).prev;
-    // perhaps edit nextr and prevr
+    SYMBOL *temp = main_rule;
+    SYMBOL *holder;
 
-    if ((*rule).refcnt == 0) {
-        // rule head is recycled
+    while (temp->next != main_rule) {
 
-    }
-    else {
-        return; // no recycling is done.
-    }
+        if (temp == rule) {
 
+            if (rule->refcnt == 0) {
+                recycle_symbol(rule);
+            }
+            else {
+                holder = rule->prev;
+                rule->next->prev = rule->prev;
+                holder->next = rule->next;
+                break;
+            }
+        }
+        temp = temp->next;
+    } // end of while loop
 }
 
 /**
@@ -155,7 +160,7 @@ void delete_rule(SYMBOL *rule) {
  */
 SYMBOL *ref_rule(SYMBOL *rule) {
     // To be implemented.
-    (*rule).refcnt = (*rule).refcnt + 1;
+    rule->refcnt = rule->refcnt + 1;
     return rule;
 }
 
@@ -170,7 +175,7 @@ SYMBOL *ref_rule(SYMBOL *rule) {
 void unref_rule(SYMBOL *rule) {
     // To be implemented.
     int temp;
-    temp = (*rule).refcnt;
+    temp = rule->refcnt;
     temp = temp - 1;
     if (temp < 0) {
         // issue a message to stderr and abort.
@@ -178,6 +183,6 @@ void unref_rule(SYMBOL *rule) {
         abort();
     }
 
-    (*rule).refcnt = (*rule).refcnt - 1;
+    rule->refcnt = rule->refcnt - 1;
 
 }

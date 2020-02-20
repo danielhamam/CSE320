@@ -50,6 +50,77 @@ int atoiPositive(char* string) {
         return temp;
     }
 
+void insert_newsymbol(SYMBOL *symbol) {
+
+    if (main_rule == NULL) {
+        insert_after(main_rule, symbol);
+    }
+    else {
+        insert_after(main_rule->prev, symbol);
+    }
+
+}
+
+// To convert each symbol in each rule to UTF
+int convert_to_utf(SYMBOL *rule , FILE *out) {
+
+    SYMBOL *currentRule = rule;
+    unsigned int value = 0;
+
+    while (currentRule->nextr != rule) {
+
+    // go through each symbol
+        while (currentRule->next != currentRule) {
+
+            currentRule = currentRule->next;
+            value = currentRule->value;
+
+            if (value >= 0 && value <= 127) { // 1 byte (0)
+                fputc(value, out);
+            }
+            else if (value >= 128 && value <= 2047) { // 2 bytes (110 10)
+                int first_half = (value & 0b00011111);
+                first_half = (first_half | 0b11000000); // 110
+                int second_half = (value >> 5) & 0b00111111;
+                second_half = (second_half | 0b10000000); // 10
+
+                fputc(first_half, out);
+                fputc(second_half, out);
+            }
+            else if (value >= 2048 && value <= 65535) { // 3 bytes (1110 10 10)
+                int first_half = (value & 0b00011111);
+                first_half = (first_half | 0b11000000); // 11110
+                int second_half = (value >> 5) & 0b00111111;
+                second_half = (second_half | 0b10000000); // 10
+                int third_half = (value >> 11) & 0b00111111;
+                third_half = (third_half | 0b10000000); // 10
+
+                fputc(first_half, out);
+                fputc(second_half, out);
+                fputc(third_half, out);
+            }
+            else if (value >= 65536 && value <= 1048575) { // 4 bytes (11110 10 10 10)
+                int first_half = (value & 0b00011111);
+                first_half = (first_half | 0b11000000); // 11110
+                int second_half = (value >> 5) & 0b00111111;
+                second_half = (second_half | 0b10000000); // 10
+                int third_half = (value >> 11) & 0b00111111;
+                third_half = (third_half | 0b10000000); // 10
+                int fourth_half = (value >> 17) & 0b0011111;
+                fourth_half = (fourth_half | 0b10000000); // 10
+
+                fputc(first_half, out);
+                fputc(second_half, out);
+                fputc(third_half, out);
+                fputc(fourth_half, out);
+            }
+        } // end of while loop (1)
+
+        currentRule = currentRule->nextr;
+    } // end of while loop (2)
+    return 0;
+} // end of function
+
 /**
  * Main compression function.
  * Reads a sequence of bytes from a specified input stream, segments the
@@ -72,29 +143,68 @@ int atoiPositive(char* string) {
  * @return  The number of bytes written, in case of success,
  * otherwise EOF.
  */
+
 int compress(FILE *in, FILE *out, int bsize) {
-    // in and out are file pointers
-    // FILE *opened_input = fopen(in, "r");
 
-    // if (opened_input == NULL) {
-    //     return EOF;
-    // }
+    unsigned int result = 0;
+    int amount_bytes = 0;
+    int readBytes = 0;
+    bsize = bsize * 1024;
+    // int check_result
 
-    // while(1) {
+    while (1) { // "MAIN LOOP"
 
-    // // read single character at a time
-    // // char file_char = fgetc(opened_input);
+        result = fgetc(in);
+        printf("result %c", result);
+        return 0;
 
-    // // check if terminated... end
-    // if (feof(opened_input)) {
-    //     break; // break out of infinite while loop
-    // }
+        // Start of Transmission
+        if (result == 0x81) {
+            continue;
+        }
 
-    // }
+        // Start of Block
+        if (result == 0x83) {
 
+            // "Reset Main_Rule"
+            main_rule->next = main_rule;
+            main_rule->prev = main_rule;
 
+            // "Reset Everything"
+            init_symbols();
+            init_rules();
+            init_digram_hash();
+        }
 
-    return EOF; // end of file
+        // End of Transmission
+        if (result == 0x82 || result == EOF) {
+            break;
+        }
+
+        if (result == 0x85) {
+            // RULE DELIMITER
+            continue;
+        }
+
+        // None of the above, so it is a valid char:
+        while(readBytes < bsize) {
+
+            SYMBOL *newsym = new_symbol(result, NULL); // NULL because non-terminal
+            insert_newsymbol(newsym);
+            check_digram(main_rule->prev->prev);
+
+            readBytes++;
+            result = fgetc(in); // get next byte
+
+        } // end of while loop (1)_
+
+    // Traverse each rule converting each symbol value into UTF
+        convert_to_utf(main_rule, out);
+
+    } // end of while loop (2)
+
+    fflush(out);
+    return amount_bytes; // end of file
 }
 
 // helper function to read UTF-8 encoded character from input
@@ -323,6 +433,7 @@ int decompress(FILE *in, FILE *out) {
             }
         }
     } // end of while(1) loop
+    // printf("amount_bytes: %d", amount_bytes);
     fflush(out); // ensure no output remains buffered in memory.
     return amount_bytes; // file does not follow format
 }
