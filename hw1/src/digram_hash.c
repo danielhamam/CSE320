@@ -89,7 +89,6 @@ SYMBOL *digram_get(int v1, int v2) {
  */
 int digram_delete(SYMBOL *digram) {
     // To be implemented.
-
     int original = DIGRAM_HASH(digram->value, digram->next->value);
 
     SYMBOL *orig_digram = *(digram_table + original);

@@ -1,6 +1,9 @@
 #include "const.h"
 #include "sequitur.h"
 
+// RECYCLED_LIST
+SYMBOL *recycled_list;
+
 /*
  * Symbol management.
  *
@@ -50,7 +53,6 @@ void init_symbols(void) {
  */
 
 // RECYCLED_LIST
-SYMBOL *recycled_list;
 
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
 
@@ -59,13 +61,13 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     if ( recycled_list != NULL ) { // not empty
         symptr = recycled_list; // last symbol in recycled_list
 
-        recycled_list = recycled_list->prev; // take off last symbol on the list.
+        recycled_list = recycled_list->next; // take off last symbol on the list.
 
         symptr->refcnt = 0; // zeroed
-        symptr->next = 0; // zeroed
-        symptr->prev = 0; // zeroed
-        symptr->nextr = 0; // zeroed
-        symptr->prevr = 0; // zeroed
+        symptr->next = NULL; // zeroed
+        symptr->prev = NULL; // zeroed
+        symptr->nextr = NULL; // zeroed
+        symptr->prevr = NULL; // zeroed
 
         if (value < FIRST_NONTERMINAL) {
             // rule = NULL
@@ -77,6 +79,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
 
             if (rule != NULL) {
                symptr->rule = rule; // rule is non-NULL
+               ref_rule(rule);
             }
             symptr->value = value;
             return symptr;
@@ -93,10 +96,10 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         // printf("numsymbols: %d", num_symbols);
         symptr = (symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
         symptr->refcnt = 0; // zeroed
-        symptr->next = 0; // zeroed
-        symptr->prev = 0; // zeroed
-        symptr->nextr = 0; // zeroed
-        symptr->prevr = 0; // zeroed
+        symptr->next = NULL; // zeroed
+        symptr->prev = NULL; // zeroed
+        symptr->nextr = NULL; // zeroed
+        symptr->prevr = NULL; // zeroed
         symptr->rule = NULL;
         symptr->value = value;
 
@@ -118,10 +121,14 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
  */
 void recycle_symbol(SYMBOL *s) {
     // Add to beginning of list.
-    recycled_list->next = s;
-    s->prev = recycled_list;
-    recycled_list = recycled_list->next;
+    if (recycled_list == NULL) {
+        recycled_list = s;
+        s->next = NULL;
+    }
+    else {
+        // Add to list
+        s->next = recycled_list->next;
+        recycled_list = s;
+    }
 
-    // // Num_symbols lower.
-    // num_symbols--;
 }

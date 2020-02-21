@@ -85,6 +85,8 @@ SYMBOL *new_rule(int v) {
     newsymbol->refcnt = 0;
     newsymbol->nextr = NULL;
     newsymbol->prevr = NULL;
+    newsymbol->next = newsymbol;
+    newsymbol->prev = newsymbol;
     newsymbol->rule = newsymbol; // sentinel points back to itself
     return newsymbol;
 }
@@ -130,25 +132,20 @@ void add_rule(SYMBOL *rule) {
  */
 void delete_rule(SYMBOL *rule) {
     // To be implemented.
-
+    debug("DELETE_RULE()");
     SYMBOL *temp = main_rule;
-    SYMBOL *holder;
 
-    while (temp->next != main_rule) {
+    while (temp->nextr != main_rule) {
 
         if (temp == rule) {
 
-            if (rule->refcnt == 0) {
-                recycle_symbol(rule);
-            }
-            else {
-                holder = rule->prev;
-                rule->next->prev = rule->prev;
-                holder->next = rule->next;
-                break;
-            }
+            rule->nextr->prevr = rule->prevr;
+            rule->prevr->nextr = rule->nextr;
+            if (rule->refcnt == 0 ) recycle_symbol(rule);
+            break;
         }
-        temp = temp->next;
+        temp = temp->nextr;
+
     } // end of while loop
 }
 
@@ -175,14 +172,13 @@ SYMBOL *ref_rule(SYMBOL *rule) {
 void unref_rule(SYMBOL *rule) {
     // To be implemented.
     int temp;
-    temp = rule->refcnt;
-    temp = temp - 1;
+    temp = rule->refcnt - 1;
     if (temp < 0) {
         // issue a message to stderr and abort.
         fprintf(stderr, "Reference count cannot be negative!");
         abort();
     }
 
-    rule->refcnt = rule->refcnt - 1;
+    rule->refcnt = temp;
 
 }
