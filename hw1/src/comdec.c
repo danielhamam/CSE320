@@ -53,6 +53,7 @@ int atoiPositive(char* string) {
 // To convert each symbol in each rule to UTF
 int convert_to_utf(SYMBOL *rule , FILE *out) {
 
+    debug("CONVERT TO UTF");
     SYMBOL *currentRule = rule;
     unsigned int value = 0;
 
@@ -164,7 +165,7 @@ int compress(FILE *in, FILE *out, int bsize) {
             }
 
             SYMBOL *newsym = new_symbol(result, NULL); // NULL because non-terminal
-            insert_after(main_rule->prev, newsym);
+            insert_after(main_rule->prev, newsym); // Error here
             check_digram(main_rule->prev->prev);
             readBytes++;
 
