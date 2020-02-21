@@ -134,20 +134,25 @@ void delete_rule(SYMBOL *rule) {
     // To be implemented.
 
     SYMBOL *temp = main_rule;
-    while (temp->nextr != main_rule) {
+    SYMBOL *holder;
+
+    while (temp->next != main_rule) {
 
         if (temp == rule) {
 
-            rule->nextr->prevr = rule->prevr;
-            rule->prevr->nextr = rule->nextr;
-            if (rule->refcnt == 0) recycle_symbol(rule);
-            break;
-
+            if (rule->refcnt == 0) {
+                recycle_symbol(rule);
+            }
+            else {
+                holder = rule->prev;
+                rule->next->prev = rule->prev;
+                holder->next = rule->next;
+                break;
+            }
         }
-        temp = temp->nextr;
+        temp = temp->next;
     } // end of while loop
 }
-
 
 /**
  * Increase the reference count on a rule by one.
@@ -172,11 +177,14 @@ SYMBOL *ref_rule(SYMBOL *rule) {
 void unref_rule(SYMBOL *rule) {
     // To be implemented.
     int temp;
-    temp = rule->refcnt - 1;
+    temp = rule->refcnt;
+    temp = temp - 1;
     if (temp < 0) {
         // issue a message to stderr and abort.
-        fprintf(stderr, "Reference count cannot be negative! ");
+        fprintf(stderr, "Reference count cannot be negative!");
         abort();
     }
-    rule->refcnt = temp;
+
+    rule->refcnt = rule->refcnt - 1;
+
 }

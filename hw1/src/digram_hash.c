@@ -15,7 +15,6 @@
 void init_digram_hash(void) {
     // To be implemented.
     int index = 0;
-    debug("init_digram_hash");
     while (index != MAX_DIGRAMS) {
         *(digram_table + index) = NULL;
         index++;
@@ -33,13 +32,10 @@ void init_digram_hash(void) {
 SYMBOL *digram_get(int v1, int v2) {
     // To be implemented.
     int original = DIGRAM_HASH(v1, v2);
+
     // Check original
     SYMBOL *orig_digram = *(digram_table + original);
-    if (orig_digram == NULL || orig_digram->next == NULL) {
-        return NULL;
-    }
-    if (orig_digram != NULL && orig_digram != TOMBSTONE) {
-        // debug("INSIDE DIGRAM_GET");
+    if (orig_digram != NULL) {
         if (orig_digram->value == v1 && orig_digram->next->value == v2)
             return orig_digram;
     }
@@ -49,21 +45,21 @@ SYMBOL *digram_get(int v1, int v2) {
         // debug("index is %d", index);
         SYMBOL *found_digram = *(digram_table + index);
         if (index == MAX_DIGRAMS) {
+            debug("RESETTING INDEX");
             index = 0;
         }
-        else if (found_digram == NULL || found_digram->next == NULL) {
+        else if (found_digram == NULL) {
             return NULL;
         }
         else if (found_digram == TOMBSTONE) {
             index++;
         }
         else if (found_digram->value == v1 && found_digram->next->value == v2) {
-            debug("DIGRAM_GET --> FOUND DIAGRAM & RETURNED");
             return found_digram;
         }
         index++;
     }
-    debug("DIGRAM_GET --> NOT FOUND");
+    // debug("NOT FOUND");
     return NULL; // did not find
 }
 
@@ -94,16 +90,18 @@ int digram_delete(SYMBOL *digram) {
 
     SYMBOL *orig_digram = *(digram_table + original);
     if (orig_digram != NULL) {
-        if (orig_digram == digram) {
+        if (orig_digram == digram)
             *(digram_table + original) = TOMBSTONE;
-        }
     }
 
     int index = original + 1;
 
     while (index != original) {
         SYMBOL *found_digram = *(digram_table + index);
-        if (found_digram == NULL) {
+        if (index == MAX_DIGRAMS) {
+            index = 0;
+        }
+        else if (found_digram == NULL) {
             return -1;
         }
         else if (found_digram == TOMBSTONE) {
@@ -113,9 +111,6 @@ int digram_delete(SYMBOL *digram) {
             // we now found it, so delete:
             *(digram_table + index) = TOMBSTONE;
             return 0;
-        }
-        else if (index == MAX_DIGRAMS) {
-            index = 0;
         }
         index++;
     }
@@ -132,36 +127,31 @@ int digram_delete(SYMBOL *digram) {
  * table being full or the given digram not being well-formed.
  */
 int digram_put(SYMBOL *digram) {
-
-    // First, check if it exists:
-    debug("DIGRAM->value: %d", digram->value);
-    debug("DIGRAM->next->value: %d", digram->next->value);
-
-    SYMBOL *ptr1 = digram_get(digram->value, digram->next->value); // Giving Error
-    if (ptr1 != NULL) {
-        debug("DIGRAM ALREADY FOUND");
-        return 1; // already found.
-    }
-
+     // To be implemented.
     int original = DIGRAM_HASH(digram->value, digram->next->value);
-    int index = original + 1;
     SYMBOL *orig_digram = *(digram_table + original);
     if (orig_digram == NULL || orig_digram == TOMBSTONE) {
-        debug("DIGRAM PUT AT INDEX: %d", index);
         *(digram_table + original) = digram;
         return 0;
+    }
+
+    int index = original + 1;
+    // First, check if it exists:
+    SYMBOL *ptr = digram_get(digram->value, digram->next->value);
+    if (ptr != NULL) {
+        return 1; // already found.
     }
 
     // Second, we can insert into table (because not found previously);
     while (index != original) {
         SYMBOL *found_digram = *(digram_table + index);
+        if (index == MAX_DIGRAMS) {
+            index = 0;
+        }
         if (found_digram == NULL || found_digram == TOMBSTONE) {
             *(digram_table + index) = digram;
             debug("DIGRAM PUT AT INDEX: %d", index);
             return 0; // did not previoiusly exist in the table and insertion was successful.
-        }
-        if (index == MAX_DIGRAMS) {
-            index = 0;
         }
         index++;
     }

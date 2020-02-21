@@ -77,7 +77,6 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
 
             if (rule != NULL) {
                symptr->rule = rule; // rule is non-NULL
-               ref_rule(rule);
             }
             symptr->value = value;
             return symptr;
