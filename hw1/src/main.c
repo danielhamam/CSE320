@@ -30,32 +30,35 @@ int main(int argc, char **argv)
         decompress(stdin, stdout);
     }
 
-
-// -------------------------------------------------
-    char **find_block = argv;
-    find_block = find_block + 3;
-    char *block_ptr = *find_block;
-    int bsize = 0;
-    while (*block_ptr != '\0') {
-        char c = *block_ptr;
-        if (c >= '0' && c <= '9') {
-            int val = c - 48;
-            bsize = bsize * 10;
-            bsize = bsize + val;
-        }
-        else {
-            return -1;
-        }
-        block_ptr++;
-    }
-// -------------------------------------------------
-
-
     int verify_compress = global_options & 2;
     if (verify_compress == 2) {
-        compress(stdin, stdout, bsize);
-    }
 
+        if (global_options == 0x4000002) {
+            compress(stdin, stdout, 1024);
+        }
+        else {
+
+        // -------------------------------------------------
+            int bsize = 0;
+            char **find_block = argv;
+            find_block = find_block + 3;
+            char *block_ptr = *find_block;
+            while (*block_ptr != '\0') {
+                char c = *block_ptr;
+                if (c >= '0' && c <= '9') {
+                    int val = c - 48;
+                        bsize = bsize * 10;
+                bsize = bsize + val;
+                }
+                else {
+                    return -1;
+                }
+                block_ptr++;
+            }
+        // -------------------------------------------------
+            compress(stdin, stdout, bsize);
+        }
+    }
     return EXIT_SUCCESS;
 }
 

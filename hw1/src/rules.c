@@ -52,6 +52,9 @@ int check_main_rule = 0; // used to add_rule accordingly.
  * Initializes the rules by setting main_rule to NULL and clearing the rule_map.
  */
 void init_rules(void) {
+
+    debug("INITIALIZE RULES");
+
     // To be implemented.
     main_rule = NULL;
     check_main_rule = 0; // reset to main_rule = null condition for add_rule.
@@ -78,6 +81,9 @@ void init_rules(void) {
  * the responsiblity of the client of this module.
  */
 SYMBOL *new_rule(int v) {
+
+    // debug("NEW RULE!");
+
     // To be implemented.
     // value is nonterminal
     // DECLARE HEADER:
@@ -103,7 +109,8 @@ SYMBOL *new_rule(int v) {
  * the list; i.e. between main_rule->prevr and main_rule.
  */
 void add_rule(SYMBOL *rule) {
-    debug("ADD_RULE");
+
+    // debug("ADD_RULE");
     // To be implemented.
     if (main_rule == NULL) {
         // creating an empty, doubly linked circular list.
@@ -113,7 +120,7 @@ void add_rule(SYMBOL *rule) {
     }
     else {
         // new rule is inserted at the end of the list. 2 or
-        main_rule->prevr->nextr = rule; // Second to last node's next is rule (ERROR)
+        main_rule->prevr->nextr = rule; // Second to last node's next is rule
         rule->nextr = main_rule; // new rule's next is head.
         rule->prevr = main_rule->prevr; // new rule's prev is the NOW second to last node.
         main_rule->prevr = rule; // main rule's previous is new rule node.
@@ -133,7 +140,8 @@ void add_rule(SYMBOL *rule) {
  */
 void delete_rule(SYMBOL *rule) {
     // To be implemented.
-    debug("DELETE_RULE()");
+    // debug("DELETE_RULE()");
+
     SYMBOL *temp = main_rule;
 
     while (temp->nextr != main_rule) {
@@ -146,8 +154,14 @@ void delete_rule(SYMBOL *rule) {
             break;
         }
         temp = temp->nextr;
-
     } // end of while loop
+
+    // Check last one too:
+    if (rule == main_rule->prevr) {
+        rule->nextr->prevr = rule->prevr;
+        rule->prevr->nextr = rule->nextr;
+        if (rule->refcnt == 0 ) recycle_symbol(rule);
+    }
 }
 
 /**
@@ -157,6 +171,8 @@ void delete_rule(SYMBOL *rule) {
  * @return  The same rule that was passed as argument.
  */
 SYMBOL *ref_rule(SYMBOL *rule) {
+
+    // debug("REF_RULE");
     // To be implemented.
     rule->refcnt = rule->refcnt + 1;
     return rule;
@@ -167,11 +183,11 @@ SYMBOL *ref_rule(SYMBOL *rule) {
  * If the reference count would become negative, this function issues a message
  * to stderr and aborts.
  *
- * @param rule  The rule whose reference count is to be increased.
+ * @param rule  The rule whose reference count is to be decreased.
  *
  */
 void unref_rule(SYMBOL *rule) {
-    // To be implemented.
+
     int temp;
     temp = rule->refcnt - 1;
     if (temp < 0) {

@@ -50,61 +50,161 @@ int atoiPositive(char* string) {
         return temp;
     }
 
-// To convert each symbol in each rule to UTF
-int convert_to_utf(SYMBOL *rule , FILE *out) {
+int innerwhile_first(SYMBOL *ptr, FILE *out) {
 
-    debug("CONVERT TO UTF");
-    SYMBOL *currentRule = rule;
+    unsigned int value = ptr->value;
+    int readbytes = 0;
+
+    if (value >= 0 && value <= 127) { // 1 byte (0)
+        fputc(value, out);
+        readbytes++;
+    }
+    else if (value >= 128 && value <= 2047) { // 2 bytes (110 10)
+        int first_half = ((value >> 6) & 0b00011111) | (0b11000000); // 110
+        int second_half = (value & 0b00111111) | 0b10000000;
+
+        fputc(first_half, out);
+        fputc(second_half, out);
+        readbytes = readbytes + 2;
+    }
+    else if (value >= 2048 && value <= 65535) { // 3 bytes (1110 10 10)
+        int first_half = ((value >> 12) & 0b00001111) | 0b11100000; // 1110
+        int second_half = ((value >> 6) & 0b00111111) | 0b10000000; // 10
+        int third_half = (value & 0b00111111) | 0b10000000; // 10
+
+        fputc(first_half, out);
+        fputc(second_half, out);
+        fputc(third_half, out);
+        readbytes = readbytes + 3;
+    }
+    else if (value >= 65536 && value <= 1048575) { // 4 bytes (11110 10 10 10)
+        int first_half = ((value >> 18) & 0b00000111) | 0b11110000; // 111110
+        int second_half = ((value >> 12) & 0b00111111) | 0b10000000; // 10
+        int third_half = ((value >> 6) & 0b00111111) | 0b10000000; // 10
+        int fourth_half = (value & 0b00111111) | 0b10000000; // 10
+
+        fputc(first_half, out);
+        fputc(second_half, out);
+        fputc(third_half, out);
+        fputc(fourth_half, out);
+        readbytes = readbytes + 4;
+    }
+    return readbytes;
+}
+
+int outerwhile_first(SYMBOL *rule, FILE *out) {
+
+    int readbytes = 0;
     unsigned int value = 0;
-
-    while (currentRule->nextr != rule) {
-
     // go through each symbol
+    SYMBOL *ptr2 = rule;
+
+    while (ptr2->next != rule) { // DOESNT DO THE LAST ONE.
+
+        value = ptr2->value;
+
+        if (value >= 0 && value <= 127) { // 1 byte (0)
+            fputc(value, out);
+            readbytes++;
+        }
+        else if (value >= 128 && value <= 2047) { // 2 bytes (110 10)
+            int first_half = ((value >> 6) & 0b00011111) | (0b11000000); // 110
+            int second_half = (value & 0b00111111) | 0b10000000;
+
+            fputc(first_half, out);
+            fputc(second_half, out);
+            readbytes = readbytes + 2;
+        }
+        else if (value >= 2048 && value <= 65535) { // 3 bytes (1110 10 10)
+            int first_half = ((value >> 12) & 0b00001111) | 0b11100000; // 1110
+            int second_half = ((value >> 6) & 0b00111111) | 0b10000000; // 10
+            int third_half = (value & 0b00111111) | 0b10000000; // 10
+
+            fputc(first_half, out);
+            fputc(second_half, out);
+            fputc(third_half, out);
+            readbytes = readbytes + 3;
+        }
+        else if (value >= 65536 && value <= 1048575) { // 4 bytes (11110 10 10 10)
+            int first_half = ((value >> 18) & 0b00000111) | 0b11110000; // 111110
+            int second_half = ((value >> 12) & 0b00111111) | 0b10000000; // 10
+            int third_half = ((value >> 6) & 0b00111111) | 0b10000000; // 10
+            int fourth_half = (value & 0b00111111) | 0b10000000; // 10
+
+            fputc(first_half, out);
+            fputc(second_half, out);
+            fputc(third_half, out);
+            fputc(fourth_half, out);
+            readbytes = readbytes + 4;
+        }
+        ptr2 = ptr2->next;
+    } // end of while loop (1)
+
+    innerwhile_first(ptr2, out);
+    return readbytes;
+}
+
+// To convert each symbol in each rule to UTF
+int convert_to_utf(SYMBOL *rule1, FILE *out) {
+
+    debug("CONVERTING TO UTF....");
+    SYMBOL *currentRule = rule1;
+    unsigned int value = 0;
+    int read_Bytes = 0;
+
+    // Print first nonterminal
+
+    while (currentRule->nextr != rule1) {
+
+        // go through each symbol
         SYMBOL *currentptr = currentRule;
-        currentptr = currentptr->next;
+        while (currentptr->next != currentRule) { // DOESNT DO THE LAST ONE.
 
-        while (currentptr->next != currentRule) {
-
-            currentptr = currentptr->next;
             value = currentptr->value;
 
             if (value >= 0 && value <= 127) { // 1 byte (0)
-                int new_val = value & 0x0111111;
-                fputc(new_val, out);
+                fputc(value, out);
+                read_Bytes++;
             }
             else if (value >= 128 && value <= 2047) { // 2 bytes (110 10)
-                int first_half = (value >> 6) | (0b11000000); // 110
+                int first_half = ((value >> 6) & 0b00011111) | (0b11000000); // 110
                 int second_half = (value & 0b00111111) | 0b10000000;
 
                 fputc(first_half, out);
                 fputc(second_half, out);
+                read_Bytes = read_Bytes + 2;
             }
             else if (value >= 2048 && value <= 65535) { // 3 bytes (1110 10 10)
-                int first_half = (value >> 12) | 0b11100000; // 11110
-                int second_half = (value >> 6) | 0b10000000; // 10
-                int third_half = value | 0b10000000; // 10
+                int first_half = ((value >> 12) & 0b00001111) | 0b11100000; // 1110
+                int second_half = ((value >> 6) & 0b00111111) | 0b10000000; // 10
+                int third_half = (value & 0b00111111) | 0b10000000; // 10
 
                 fputc(first_half, out);
                 fputc(second_half, out);
                 fputc(third_half, out);
+                read_Bytes = read_Bytes + 3;
             }
             else if (value >= 65536 && value <= 1048575) { // 4 bytes (11110 10 10 10)
-                int first_half = (value >> 18) | 0b11110000; // 111110
-                int second_half = (value >> 12) | 0b10000000; // 10
-                int third_half = (value >> 6) | 0b10000000; // 10
-                int fourth_half = (value | 0b10000000); // 10
+                int first_half = ((value >> 18) & 0b00000111) | 0b11110000; // 111110
+                int second_half = ((value >> 12) & 0b00111111) | 0b10000000; // 10
+                int third_half = ((value >> 6) & 0b00111111) | 0b10000000; // 10
+                int fourth_half = (value & 0b00111111) | 0b10000000; // 10
 
                 fputc(first_half, out);
                 fputc(second_half, out);
                 fputc(third_half, out);
                 fputc(fourth_half, out);
+                read_Bytes = read_Bytes + 4;
             }
+            currentptr = currentptr->next;
         } // end of while loop (1)
 
+        innerwhile_first(currentptr, out);
         currentRule = currentRule->nextr;
         fputc(0x85, out);
     } // end of while loop (2)
-    return 0;
+    outerwhile_first(currentRule, out);
+    return read_Bytes;
 } // end of function
 
 /**
@@ -138,6 +238,7 @@ int compress(FILE *in, FILE *out, int bsize) {
     bsize = bsize * 1024;
 
     fputc(0x81, out); // SOT MARKER
+    amount_bytes++;
 
     while (1) { // "MAIN LOOP"
 
@@ -154,8 +255,8 @@ int compress(FILE *in, FILE *out, int bsize) {
         next_nonterminal_value++;
 
         fputc(0x83, out); // Start of Block Marker
+        amount_bytes++;
 
-        // 0x82 = EOT, 0x85 = RULE DELIMITER, 0x83 = SOB, 0x81 = SOT
         while(readBytes < bsize) {
 
             result = fgetc(in); // get next byte
@@ -165,14 +266,41 @@ int compress(FILE *in, FILE *out, int bsize) {
             }
 
             SYMBOL *newsym = new_symbol(result, NULL); // NULL because non-terminal
-            insert_after(main_rule->prev, newsym); // Error here
+            insert_after(main_rule->prev, newsym);
             check_digram(main_rule->prev->prev);
             readBytes++;
 
         } // end of while loop (1)_
 
-        fputc(0x82, out); // End of Block Marker
-        convert_to_utf(main_rule, out);
+        // printf("\n---------------------------------------------\n");
+
+        // SYMBOL *currentRule = main_rule;
+        // while (currentRule->nextr != main_rule) {
+        //         SYMBOL *temp = currentRule;
+        //         temp = temp->next;
+        //         printf("%d => ", currentRule->value);
+        //     while (temp != currentRule) {
+        //         printf(" %d ", temp->value);
+        //         temp = temp->next;
+        //     }
+        //     printf("\n");
+        //     currentRule = currentRule->nextr;
+        // }
+        // // Last Rule
+        // printf("%d => ", currentRule->value);
+        // SYMBOL *temp = currentRule;
+        // temp = temp->next;
+        // while (temp != currentRule) {
+        //     printf(" %d ",  temp->value);
+        //     temp = temp->next;
+        // }
+
+        // printf("\n---------------------------------------------");
+        // return 0;
+
+        amount_bytes += convert_to_utf(main_rule, out);
+        fputc(0x84, out); // End of Block Marker
+        amount_bytes++;
 
         if (result == EOF) {
             break;
@@ -180,9 +308,11 @@ int compress(FILE *in, FILE *out, int bsize) {
 
     } // end of while loop (2)
 
-    fputc(0x84, out); // EOT MARKER
+    fputc(0x82, out); // EOT MARKER
+    amount_bytes++;
 
     fflush(out);
+    debug("AMOUNT OF BYTES: %d", amount_bytes);
     return amount_bytes; // end of file
 }
 

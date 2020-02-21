@@ -14,11 +14,11 @@
  */
 void init_digram_hash(void) {
     // To be implemented.
-    int index = 0;
+    int dig_index = 0;
     debug("init_digram_hash");
-    while (index != MAX_DIGRAMS) {
-        *(digram_table + index) = NULL;
-        index++;
+    while (dig_index != MAX_DIGRAMS) {
+        *(digram_table + dig_index) = NULL;
+        dig_index++;
     }
 }
 
@@ -39,23 +39,24 @@ SYMBOL *digram_get(int v1, int v2) {
     if (orig_digram == NULL) {
         return NULL;
     }
-    if (orig_digram != NULL && orig_digram != TOMBSTONE) {
+    else if (orig_digram != NULL && orig_digram != TOMBSTONE) {
         if (orig_digram->value == v1 && orig_digram->next->value == v2)
             return orig_digram;
     }
-    debug("INSIDE DIGRAM_GET");
+
     int index = original + 1;
     while (index != original) {
         // debug("index is %d", index);
         SYMBOL *found_digram = *(digram_table + index);
-        if (index == MAX_DIGRAMS) {
-            index = 0;
-        }
-        else if (found_digram == NULL) {
+        if (found_digram == NULL) {
             return NULL;
         }
+        else if (index == MAX_DIGRAMS) {
+            index = 0;
+            continue;
+        }
         else if (found_digram == TOMBSTONE) {
-            index++;
+            // nothing
         }
         else if (found_digram->value == v1 && found_digram->next->value == v2) {
             debug("DIGRAM_GET --> FOUND DIAGRAM & RETURNED");
@@ -96,9 +97,9 @@ int digram_delete(SYMBOL *digram) {
 
     SYMBOL *orig_digram = *(digram_table + original);
     if (orig_digram != NULL) {
-        debug("DIGRAM_DELETE BLOCK 0");
-        if (orig_digram == digram) {
+        if (orig_digram == digram && orig_digram->next == digram->next) {
             *(digram_table + original) = TOMBSTONE;
+            return 0;
         }
     }
 
@@ -107,11 +108,10 @@ int digram_delete(SYMBOL *digram) {
     while (index != original) {
         SYMBOL *found_digram = *(digram_table + index);
         if (found_digram == NULL) {
-        debug("DIGRAM_DELETE BLOCK 0");
             return -1;
         }
         else if (found_digram == TOMBSTONE) {
-            index++;
+
         }
         else if (found_digram == digram && found_digram->next == digram->next) {
             // we now found it, so delete:
@@ -120,6 +120,7 @@ int digram_delete(SYMBOL *digram) {
         }
         else if (index == MAX_DIGRAMS) {
             index = 0;
+            continue;
         }
         index++;
     }
@@ -137,13 +138,12 @@ int digram_delete(SYMBOL *digram) {
  */
 int digram_put(SYMBOL *digram) {
 
+    debug("DIGRAM_PUT");
+
     // First, check if it exists:
-    debug("DIGRAM->value: %d", digram->value);
-    debug("DIGRAM->next->value: %d", digram->next->value);
 
     SYMBOL *ptr1 = digram_get(digram->value, digram->next->value); // Giving Error
     if (ptr1 != NULL) {
-        debug("DIGRAM ALREADY FOUND");\
         return 1; // already found.
     }
 
@@ -151,7 +151,7 @@ int digram_put(SYMBOL *digram) {
     int index = original + 1;
     SYMBOL *orig_digram = *(digram_table + original);
     if (orig_digram == NULL || orig_digram == TOMBSTONE) {
-        debug("DIGRAM PUT AT INDEX: %d", index);
+        // debug("DIGRAM PUT AT INDEX: %d", original);
         *(digram_table + original) = digram;
         return 0;
     }
@@ -166,6 +166,7 @@ int digram_put(SYMBOL *digram) {
         }
         if (index == MAX_DIGRAMS) {
             index = 0;
+            continue;
         }
         index++;
     }
