@@ -59,44 +59,39 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
     while (currentRule->nextr != rule) {
 
     // go through each symbol
-        while (currentRule->next != currentRule) {
+        SYMBOL *currentptr = currentRule;
+        currentptr = currentptr->next;
 
-            currentRule = currentRule->next;
-            value = currentRule->value;
+        while (currentptr->next != currentRule) {
+
+            currentptr = currentptr->next;
+            value = currentptr->value;
 
             if (value >= 0 && value <= 127) { // 1 byte (0)
-                fputc(value, out);
+                int new_val = value & 0x0111111;
+                fputc(new_val, out);
             }
             else if (value >= 128 && value <= 2047) { // 2 bytes (110 10)
-                int first_half = (value & 0b00011111);
-                first_half = (first_half | 0b11000000); // 110
-                int second_half = (value >> 5) & 0b00111111;
-                second_half = (second_half | 0b10000000); // 10
+                int first_half = (value >> 6) | (0b11000000); // 110
+                int second_half = (value & 0b00111111) | 0b10000000;
 
                 fputc(first_half, out);
                 fputc(second_half, out);
             }
             else if (value >= 2048 && value <= 65535) { // 3 bytes (1110 10 10)
-                int first_half = (value & 0b00011111);
-                first_half = (first_half | 0b11000000); // 11110
-                int second_half = (value >> 5) & 0b00111111;
-                second_half = (second_half | 0b10000000); // 10
-                int third_half = (value >> 11) & 0b00111111;
-                third_half = (third_half | 0b10000000); // 10
+                int first_half = (value >> 12) | 0b11100000; // 11110
+                int second_half = (value >> 6) | 0b10000000; // 10
+                int third_half = value | 0b10000000; // 10
 
                 fputc(first_half, out);
                 fputc(second_half, out);
                 fputc(third_half, out);
             }
             else if (value >= 65536 && value <= 1048575) { // 4 bytes (11110 10 10 10)
-                int first_half = (value & 0b00011111);
-                first_half = (first_half | 0b11000000); // 11110
-                int second_half = (value >> 5) & 0b00111111;
-                second_half = (second_half | 0b10000000); // 10
-                int third_half = (value >> 11) & 0b00111111;
-                third_half = (third_half | 0b10000000); // 10
-                int fourth_half = (value >> 17) & 0b0011111;
-                fourth_half = (fourth_half | 0b10000000); // 10
+                int first_half = (value >> 18) | 0b11110000; // 111110
+                int second_half = (value >> 12) | 0b10000000; // 10
+                int third_half = (value >> 6) | 0b10000000; // 10
+                int fourth_half = (value | 0b10000000); // 10
 
                 fputc(first_half, out);
                 fputc(second_half, out);
@@ -106,6 +101,7 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
         } // end of while loop (1)
 
         currentRule = currentRule->nextr;
+        fputc(0x85, out);
     } // end of while loop (2)
     return 0;
 } // end of function
@@ -139,15 +135,12 @@ int compress(FILE *in, FILE *out, int bsize) {
     int amount_bytes = 0;
     int readBytes = 0;
     bsize = bsize * 1024;
-    int loop = 0;
 
     fputc(0x81, out); // SOT MARKER
 
     while (1) { // "MAIN LOOP"
 
         readBytes = 0;
-        debug("LOOP: %d", loop);
-        loop++;
 
         // "Reset Everything"
         init_symbols();
@@ -178,16 +171,6 @@ int compress(FILE *in, FILE *out, int bsize) {
         } // end of while loop (1)_
 
         fputc(0x82, out); // End of Block Marker
-
-        // SYMBOL *temp = main_rule;
-        // LINKED LIST:
-        // while (temp->next != main_rule) {
-        //     debug("LINKED LIST %d", temp->value);
-        //     temp = temp->next;
-        // }
-
-        // Traverse each rule converting each symbol value into UTF
-        debug("MAIN_AFTER: %p", main_rule->prev);
         convert_to_utf(main_rule, out);
 
         if (result == EOF) {
