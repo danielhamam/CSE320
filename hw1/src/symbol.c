@@ -24,6 +24,7 @@ int next_nonterminal_value = FIRST_NONTERMINAL;
 void init_symbols(void) {
     // To be implemented.
     // frees all symbols.
+
     num_symbols = 0; // setting num_symbols to 0;
     next_nonterminal_value = FIRST_NONTERMINAL; // reset to FIRST_NONTERMINAL
     recycled_list = NULL;
@@ -57,11 +58,12 @@ void init_symbols(void) {
 
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
 
+    debug("CREATING NEW SYMBOL");
     SYMBOL *symptr = NULL;
 
     if ( recycled_list != NULL ) { // not empty
-        symptr = recycled_list; // last symbol in recycled_list
 
+        symptr = recycled_list; // last symbol in recycled_list
         recycled_list = recycled_list->next; // take off last symbol on the list.
 
         symptr->refcnt = 0; // zeroed
@@ -69,11 +71,11 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
         symptr->prev = NULL; // zeroed
         symptr->nextr = NULL; // zeroed
         symptr->prevr = NULL; // zeroed
+        symptr->rule = NULL; // default
+        symptr->value = value;
 
         if (value < FIRST_NONTERMINAL) {
             // rule = NULL
-            symptr->rule = NULL;
-            symptr->value = value;
             return symptr;
         }
         else if (value >= FIRST_NONTERMINAL) { // non-terminal
@@ -81,11 +83,10 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
             if (rule != NULL) {
                symptr->rule = rule; // rule is non-NULL
                ref_rule(rule);
+               return symptr;
             }
-            symptr->value = value;
-            return symptr;
         }
-    }
+    } // end of first if statement recycled_list != NULL
     else {
         // check if storage is full
         if (num_symbols >= MAX_SYMBOLS) {
@@ -93,17 +94,23 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
             fprintf(stderr, "Symbol storage is exhausted! Can not create new symbol.");
             abort();
         }
-        // else
-        // printf("numsymbols: %d", num_symbols);
+
         symptr = (symbol_storage + num_symbols); // from piazza: a[i] <--> *(a+i)
         symptr->refcnt = 0; // zeroed
         symptr->next = NULL; // zeroed
         symptr->prev = NULL; // zeroed
         symptr->nextr = NULL; // zeroed
         symptr->prevr = NULL; // zeroed
-        symptr->rule = NULL;
+        symptr->rule = NULL; // default for terminal
         symptr->value = value;
 
+        if (value >= FIRST_NONTERMINAL) { // non-terminal
+
+            if (rule != NULL) {
+               symptr->rule = rule; // rule is non-NULL
+               ref_rule(rule);
+            }
+        }
         num_symbols++; // increment num_symbols global variable
     }
     return symptr;
@@ -121,6 +128,8 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
  * next field of the SYMBOL structure to chain together the entries.
  */
 void recycle_symbol(SYMBOL *s) {
+
+    debug("RECYCLING SYMBOL");
     // Add to beginning of list.
     if (recycled_list == NULL) {
         recycled_list = s;

@@ -62,8 +62,8 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
 
     // go through each symbol
         SYMBOL *currentptr = currentRule;
-
-        while (currentptr->next != currentRule) {
+        debug(" CURRENTPTR->next: %ptr ", currentptr->next);
+        while (currentptr->next != currentRule) { // ERROR HERE: turns into null
 
             currentptr = currentptr->next; // to skip head of rule.
             value = currentptr->value;
@@ -182,16 +182,25 @@ int compress(FILE *in, FILE *out, int bsize) {
                 SYMBOL *temp = currentRule;
                 temp = temp->next;
                 printf("%d => ", currentRule->value);
-            while (temp->next != currentRule) {
+            while (temp != currentRule) {
                 printf(" %d ", temp->value);
                 temp = temp->next;
             }
             printf("\n");
             currentRule = currentRule->nextr;
         }
+        // // Last Rule
+        // printf(" %d => ", currentRule->value);
+        // SYMBOL *temp = currentRule;
+        // temp = temp->next;
+        // while (temp != currentRule) {
+        //     printf(" %d ",  temp->value);
+        //     temp = temp->next;
+        // }
 
         printf("\n---------------------------------------------");
 
+        // return 0;
         amount_bytes += convert_to_utf(main_rule, out);
         fputc(0x84, out); // End of Block Marker
         amount_bytes++;

@@ -30,13 +30,7 @@ int main(int argc, char **argv)
         decompress(stdin, stdout);
     }
 
-
-    if (global_options == 0x4000002) {
-        compress(stdin, stdout, 1024);
-    }
-
     int verify_compress = global_options & 2;
-    debug("VERIFY COMPRESS: %x", verify_compress);
     if (verify_compress == 2) {
 
         if (global_options == 0x4000002) {
@@ -62,7 +56,6 @@ int main(int argc, char **argv)
                 block_ptr++;
             }
         // -------------------------------------------------
-            printf("BSIZE: %d", bsize);
             compress(stdin, stdout, bsize);
         }
     }
