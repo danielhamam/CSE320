@@ -50,6 +50,8 @@ int atoiPositive(char* string) {
         return temp;
     }
 
+// int convert_to_utf_first(SYMBOL *rule, FILE *out) {}
+
 // To convert each symbol in each rule to UTF
 int convert_to_utf(SYMBOL *rule , FILE *out) {
 
@@ -58,14 +60,14 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
     unsigned int value = 0;
     int read_Bytes = 0;
 
+    // Print first nonterminal
+
     while (currentRule->nextr != rule) {
 
-    // go through each symbol
+        // go through each symbol
         SYMBOL *currentptr = currentRule;
-        debug(" CURRENTPTR->next: %ptr ", currentptr->next);
         while (currentptr->next != currentRule) { // ERROR HERE: turns into null
 
-            currentptr = currentptr->next; // to skip head of rule.
             value = currentptr->value;
 
             if (value >= 0 && value <= 127) { // 1 byte (0)
@@ -102,6 +104,7 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
                 fputc(fourth_half, out);
                 read_Bytes = read_Bytes + 4;
             }
+            currentptr = currentptr->next;
         } // end of while loop (1)
 
         currentRule = currentRule->nextr;
@@ -175,22 +178,22 @@ int compress(FILE *in, FILE *out, int bsize) {
 
         } // end of while loop (1)_
 
-        printf("\n---------------------------------------------\n");
+        // printf("\n---------------------------------------------\n");
 
-        SYMBOL *currentRule = main_rule;
-        while (currentRule->nextr != main_rule) {
-                SYMBOL *temp = currentRule;
-                temp = temp->next;
-                printf("%d => ", currentRule->value);
-            while (temp != currentRule) {
-                printf(" %d ", temp->value);
-                temp = temp->next;
-            }
-            printf("\n");
-            currentRule = currentRule->nextr;
-        }
+        // SYMBOL *currentRule = main_rule;
+        // while (currentRule->nextr != main_rule) {
+        //         SYMBOL *temp = currentRule;
+        //         temp = temp->next;
+        //         printf("%d => ", currentRule->value);
+        //     while (temp != currentRule) {
+        //         printf(" %d ", temp->value);
+        //         temp = temp->next;
+        //     }
+        //     printf("\n");
+        //     currentRule = currentRule->nextr;
+        // }
         // // Last Rule
-        // printf(" %d => ", currentRule->value);
+        // printf("%d => ", currentRule->value);
         // SYMBOL *temp = currentRule;
         // temp = temp->next;
         // while (temp != currentRule) {
@@ -198,7 +201,8 @@ int compress(FILE *in, FILE *out, int bsize) {
         //     temp = temp->next;
         // }
 
-        printf("\n---------------------------------------------");
+        // printf("\n---------------------------------------------");
+        // return 0;
 
         // return 0;
         amount_bytes += convert_to_utf(main_rule, out);

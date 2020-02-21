@@ -82,7 +82,7 @@ void init_rules(void) {
  */
 SYMBOL *new_rule(int v) {
 
-    debug("NEW RULE!");
+    // debug("NEW RULE!");
 
     // To be implemented.
     // value is nonterminal
@@ -110,7 +110,7 @@ SYMBOL *new_rule(int v) {
  */
 void add_rule(SYMBOL *rule) {
 
-    debug("ADD_RULE");
+    // debug("ADD_RULE");
     // To be implemented.
     if (main_rule == NULL) {
         // creating an empty, doubly linked circular list.
@@ -140,7 +140,7 @@ void add_rule(SYMBOL *rule) {
  */
 void delete_rule(SYMBOL *rule) {
     // To be implemented.
-    debug("DELETE_RULE()");
+    // debug("DELETE_RULE()");
 
     SYMBOL *temp = main_rule;
 
@@ -172,7 +172,7 @@ void delete_rule(SYMBOL *rule) {
  */
 SYMBOL *ref_rule(SYMBOL *rule) {
 
-    debug("REF_RULE");
+    // debug("REF_RULE");
     // To be implemented.
     rule->refcnt = rule->refcnt + 1;
     return rule;
@@ -188,7 +188,7 @@ SYMBOL *ref_rule(SYMBOL *rule) {
  */
 void unref_rule(SYMBOL *rule) {
 
-    debug("UNREF_RULE");
+    // debug("UNREF_RULE");
 
     // To be implemented.
     int temp;

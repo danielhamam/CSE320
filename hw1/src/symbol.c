@@ -58,7 +58,7 @@ void init_symbols(void) {
 
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
 
-    debug("CREATING NEW SYMBOL");
+    // debug("CREATING NEW SYMBOL");
     SYMBOL *symptr = NULL;
 
     if ( recycled_list != NULL ) { // not empty
@@ -129,7 +129,7 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
  */
 void recycle_symbol(SYMBOL *s) {
 
-    debug("RECYCLING SYMBOL");
+    // debug("RECYCLING SYMBOL");
     // Add to beginning of list.
     if (recycled_list == NULL) {
         recycled_list = s;
