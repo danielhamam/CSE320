@@ -152,7 +152,10 @@ int compress(FILE *in, FILE *out, int bsize) {
         add_rule(newrule);
         next_nonterminal_value++;
 
+
         fputc(0x83, out); // Start of Block Marker
+
+                      debug("MAde it here");
 
         // 0x82 = EOT, 0x85 = RULE DELIMITER, 0x83 = SOB, 0x81 = SOT
         while(readBytes < bsize) {

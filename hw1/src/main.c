@@ -32,6 +32,7 @@ int main(int argc, char **argv)
 
     int verify_compress = global_options & 2;
     if (verify_compress == 2) {
+        debug("HEY");
         compress(stdin, stdout, 1024);
     }
 
