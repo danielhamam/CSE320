@@ -1,8 +1,13 @@
 image: hwrunner:latest
 variables:
     GIT_SSL_NO_VERIFY: "true"
+<<<<<<< HEAD
     EXEC: hi
     HW_DIR: hw0
+=======
+    EXEC: sequitur
+    HW_DIR: hw1
+>>>>>>> HW1_CODE/master
 before_script:
     - make clean all -C ${HW_DIR}
 stages:
@@ -16,8 +21,16 @@ build:
 run:
     stage: run
     script:
+<<<<<<< HEAD
         - ${HW_DIR}/bin/${EXEC}
 test:
     stage: test
     script:
         - ${HW_DIR}/bin/${EXEC}_test -S --verbose=0 --timeout 5
+=======
+        - cd ${HW_DIR} && bin/${EXEC} -h
+test:
+    stage: test
+    script:
+        - cd ${HW_DIR} && bin/${EXEC}_tests -S --verbose=0 --timeout 5
+>>>>>>> HW1_CODE/master
