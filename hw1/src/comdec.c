@@ -56,6 +56,7 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
     debug("CONVERTING TO UTF....");
     SYMBOL *currentRule = rule;
     unsigned int value = 0;
+    int read_Bytes = 0;
 
     while (currentRule->nextr != rule) {
 
@@ -69,6 +70,7 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
 
             if (value >= 0 && value <= 127) { // 1 byte (0)
                 fputc(value, out);
+                read_Bytes++;
             }
             else if (value >= 128 && value <= 2047) { // 2 bytes (110 10)
                 int first_half = ((value >> 6) & 0b00011111) | (0b11000000); // 110
@@ -76,6 +78,7 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
 
                 fputc(first_half, out);
                 fputc(second_half, out);
+                read_Bytes = read_Bytes + 2;
             }
             else if (value >= 2048 && value <= 65535) { // 3 bytes (1110 10 10)
                 int first_half = ((value >> 12) & 0b00001111) | 0b11100000; // 1110
@@ -85,6 +88,7 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
                 fputc(first_half, out);
                 fputc(second_half, out);
                 fputc(third_half, out);
+                read_Bytes = read_Bytes + 3;
             }
             else if (value >= 65536 && value <= 1048575) { // 4 bytes (11110 10 10 10)
                 int first_half = ((value >> 18) & 0b00000111) | 0b11110000; // 111110
@@ -96,13 +100,14 @@ int convert_to_utf(SYMBOL *rule , FILE *out) {
                 fputc(second_half, out);
                 fputc(third_half, out);
                 fputc(fourth_half, out);
+                read_Bytes = read_Bytes + 4;
             }
         } // end of while loop (1)
 
         currentRule = currentRule->nextr;
         fputc(0x85, out);
     } // end of while loop (2)
-    return 0;
+    return read_Bytes;
 } // end of function
 
 /**
@@ -136,6 +141,7 @@ int compress(FILE *in, FILE *out, int bsize) {
     bsize = bsize * 1024;
 
     fputc(0x81, out); // SOT MARKER
+    amount_bytes++;
 
     while (1) { // "MAIN LOOP"
 
@@ -152,6 +158,7 @@ int compress(FILE *in, FILE *out, int bsize) {
         next_nonterminal_value++;
 
         fputc(0x83, out); // Start of Block Marker
+        amount_bytes++;
 
         while(readBytes < bsize) {
 
@@ -168,8 +175,26 @@ int compress(FILE *in, FILE *out, int bsize) {
 
         } // end of while loop (1)_
 
-        convert_to_utf(main_rule, out);
+        printf("\n---------------------------------------------\n");
+
+        SYMBOL *currentRule = main_rule;
+        while (currentRule->nextr != main_rule) {
+                SYMBOL *temp = currentRule;
+                temp = temp->next;
+                printf("%d => ", currentRule->value);
+            while (temp->next != currentRule) {
+                printf(" %d ", temp->value);
+                temp = temp->next;
+            }
+            printf("\n");
+            currentRule = currentRule->nextr;
+        }
+
+        printf("\n---------------------------------------------");
+
+        amount_bytes += convert_to_utf(main_rule, out);
         fputc(0x84, out); // End of Block Marker
+        amount_bytes++;
 
         if (result == EOF) {
             break;
@@ -178,8 +203,10 @@ int compress(FILE *in, FILE *out, int bsize) {
     } // end of while loop (2)
 
     fputc(0x82, out); // EOT MARKER
+    amount_bytes++;
 
     fflush(out);
+    debug("AMOUNT OF BYTES: %d", amount_bytes);
     return amount_bytes; // end of file
 }
 
