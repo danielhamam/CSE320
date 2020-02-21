@@ -103,6 +103,7 @@ SYMBOL *new_rule(int v) {
  * the list; i.e. between main_rule->prevr and main_rule.
  */
 void add_rule(SYMBOL *rule) {
+    debug("ADD_RULE");
     // To be implemented.
     if (main_rule == NULL) {
         // creating an empty, doubly linked circular list.

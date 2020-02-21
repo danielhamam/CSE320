@@ -31,11 +31,12 @@ void init_digram_hash(void) {
  * symbol values) in the hash table, if there is one, otherwise NULL.
  */
 SYMBOL *digram_get(int v1, int v2) {
+    debug("DIGRAM_GET()");
     // To be implemented.
     int original = DIGRAM_HASH(v1, v2);
     // Check original
     SYMBOL *orig_digram = *(digram_table + original);
-    if (orig_digram == NULL || orig_digram->next == NULL) {
+    if (orig_digram == NULL) {
         return NULL;
     }
     if (orig_digram != NULL && orig_digram != TOMBSTONE) {
@@ -88,6 +89,9 @@ SYMBOL *digram_get(int v1, int v2) {
  * sense to do it here.
  */
 int digram_delete(SYMBOL *digram) {
+
+    debug("DIGRAM_DELETE");
+
     // To be implemented.
     int original = DIGRAM_HASH(digram->value, digram->next->value);
 

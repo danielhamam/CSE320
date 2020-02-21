@@ -53,6 +53,7 @@ int atoiPositive(char* string) {
 // To convert each symbol in each rule to UTF
 int convert_to_utf(SYMBOL *rule , FILE *out) {
 
+    debug("CONVERT TO UTF");
     SYMBOL *currentRule = rule;
     unsigned int value = 0;
 
