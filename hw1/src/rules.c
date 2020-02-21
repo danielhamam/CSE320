@@ -113,7 +113,7 @@ void add_rule(SYMBOL *rule) {
     }
     else {
         // new rule is inserted at the end of the list. 2 or
-        main_rule->prevr->nextr = rule; // Second to last node's next is rule (ERROR)
+        main_rule->prevr->nextr = rule; // Second to last node's next is rule
         rule->nextr = main_rule; // new rule's next is head.
         rule->prevr = main_rule->prevr; // new rule's prev is the NOW second to last node.
         main_rule->prevr = rule; // main rule's previous is new rule node.
@@ -167,7 +167,7 @@ SYMBOL *ref_rule(SYMBOL *rule) {
  * If the reference count would become negative, this function issues a message
  * to stderr and aborts.
  *
- * @param rule  The rule whose reference count is to be increased.
+ * @param rule  The rule whose reference count is to be decreased.
  *
  */
 void unref_rule(SYMBOL *rule) {

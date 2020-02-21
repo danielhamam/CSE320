@@ -26,6 +26,7 @@ void init_symbols(void) {
     // frees all symbols.
     num_symbols = 0; // setting num_symbols to 0;
     next_nonterminal_value = FIRST_NONTERMINAL; // reset to FIRST_NONTERMINAL
+    recycled_list = NULL;
 }
 
 /**
