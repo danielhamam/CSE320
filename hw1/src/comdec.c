@@ -140,7 +140,7 @@ int outerwhile_first(SYMBOL *rule, FILE *out) {
         ptr2 = ptr2->next;
     } // end of while loop (1)
 
-    innerwhile_first(ptr2, out);
+    readbytes += innerwhile_first(ptr2, out);
     return readbytes;
 }
 
@@ -199,11 +199,12 @@ int convert_to_utf(SYMBOL *rule1, FILE *out) {
             currentptr = currentptr->next;
         } // end of while loop (1)
 
-        innerwhile_first(currentptr, out);
+        read_Bytes += innerwhile_first(currentptr, out);
         currentRule = currentRule->nextr;
         fputc(0x85, out);
+        read_Bytes++;
     } // end of while loop (2)
-    outerwhile_first(currentRule, out);
+    read_Bytes += outerwhile_first(currentRule, out);
     return read_Bytes;
 } // end of function
 
@@ -271,32 +272,6 @@ int compress(FILE *in, FILE *out, int bsize) {
             readBytes++;
 
         } // end of while loop (1)_
-
-        // printf("\n---------------------------------------------\n");
-
-        // SYMBOL *currentRule = main_rule;
-        // while (currentRule->nextr != main_rule) {
-        //         SYMBOL *temp = currentRule;
-        //         temp = temp->next;
-        //         printf("%d => ", currentRule->value);
-        //     while (temp != currentRule) {
-        //         printf(" %d ", temp->value);
-        //         temp = temp->next;
-        //     }
-        //     printf("\n");
-        //     currentRule = currentRule->nextr;
-        // }
-        // // Last Rule
-        // printf("%d => ", currentRule->value);
-        // SYMBOL *temp = currentRule;
-        // temp = temp->next;
-        // while (temp != currentRule) {
-        //     printf(" %d ",  temp->value);
-        //     temp = temp->next;
-        // }
-
-        // printf("\n---------------------------------------------");
-        // return 0;
 
         amount_bytes += convert_to_utf(main_rule, out);
         fputc(0x84, out); // End of Block Marker
