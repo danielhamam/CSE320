@@ -30,27 +30,9 @@ int main(int argc, char **argv)
         decompress(stdin, stdout);
     }
 
-// -------------------------------------------------------------------
     int verify_compress = global_options & 2;
-    char **find_block = argv;
-    find_block = find_block + 3;
-    char *block_ptr = *find_block;
-    int bsize = 0;
-    while (*block_ptr != '\0') {
-        char c = *block_ptr;
-        if (c >= '0' && c <= '9') {
-            int val = c - 48; // SUBTRACT ASCII VALUES.
-            bsize = bsize * 10;
-            bsize = bsize + val;
-        } else {
-            return -1;
-        }
-        block_ptr++;
-    }
-// -------------------------------------------------------------------
-
     if (verify_compress == 2) {
-        compress(stdin, stdout, bsize);
+        compress(stdin, stdout, 1024);
     }
 
     return EXIT_SUCCESS;

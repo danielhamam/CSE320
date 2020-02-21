@@ -85,8 +85,6 @@ SYMBOL *new_rule(int v) {
     newsymbol->refcnt = 0;
     newsymbol->nextr = NULL;
     newsymbol->prevr = NULL;
-    newsymbol->next = newsymbol;
-    newsymbol->prev = newsymbol;
     newsymbol->rule = newsymbol; // sentinel points back to itself
     return newsymbol;
 }

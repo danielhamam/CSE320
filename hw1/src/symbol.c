@@ -1,9 +1,6 @@
 #include "const.h"
 #include "sequitur.h"
 
-// RECYCLED_LIST
-SYMBOL *recycled_list;
-
 /*
  * Symbol management.
  *
@@ -52,6 +49,9 @@ void init_symbols(void) {
  * allocation.
  */
 
+// RECYCLED_LIST
+SYMBOL *recycled_list;
+
 SYMBOL *new_symbol(int value, SYMBOL *rule) {
 
     SYMBOL *symptr = NULL;
@@ -59,13 +59,13 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
     if ( recycled_list != NULL ) { // not empty
         symptr = recycled_list; // last symbol in recycled_list
 
-        recycled_list = recycled_list->next; // take off last symbol on the list.
+        recycled_list = recycled_list->prev; // take off last symbol on the list.
 
         symptr->refcnt = 0; // zeroed
-        symptr->next = NULL; // zeroed
-        symptr->prev = NULL; // zeroed
-        symptr->nextr = NULL; // zeroed
-        symptr->prevr = NULL; // zeroed
+        symptr->next = 0; // zeroed
+        symptr->prev = 0; // zeroed
+        symptr->nextr = 0; // zeroed
+        symptr->prevr = 0; // zeroed
 
         if (value < FIRST_NONTERMINAL) {
             // rule = NULL
@@ -117,13 +117,11 @@ SYMBOL *new_symbol(int value, SYMBOL *rule) {
  * next field of the SYMBOL structure to chain together the entries.
  */
 void recycle_symbol(SYMBOL *s) {
-    if (recycled_list == NULL) {
-        recycled_list = s;
-        s->next = NULL;
-    }
-    else {
     // Add to beginning of list.
-        s->next = recycled_list->next;
-        recycled_list = s;
-    }
+    recycled_list->next = s;
+    s->prev = recycled_list;
+    recycled_list = recycled_list->next;
+
+    // // Num_symbols lower.
+    // num_symbols--;
 }

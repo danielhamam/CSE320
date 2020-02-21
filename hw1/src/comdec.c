@@ -50,6 +50,17 @@ int atoiPositive(char* string) {
         return temp;
     }
 
+void insert_newsymbol(SYMBOL *symbol) {
+
+    if (main_rule == NULL) {
+        insert_after(main_rule, symbol);
+    }
+    else {
+        insert_after(main_rule->prev, symbol);
+    }
+
+}
+
 // To convert each symbol in each rule to UTF
 int convert_to_utf(SYMBOL *rule , FILE *out) {
 
@@ -139,64 +150,58 @@ int compress(FILE *in, FILE *out, int bsize) {
     int amount_bytes = 0;
     int readBytes = 0;
     bsize = bsize * 1024;
-    int loop = 0;
-
-    fputc(0x81, out); // SOT MARKER
+    // int check_result
 
     while (1) { // "MAIN LOOP"
 
-        readBytes = 0;
-        debug("LOOP: %d", loop);
-        loop++;
+        result = fgetc(in);
+        printf("result %c", result);
 
-        // "Reset Everything"
-        init_symbols();
-        init_rules();
-        init_digram_hash();
+        // Start of Transmission
+        if (result == 0x81) {
+            continue;
+        }
 
-        // "Set Main_Rule"
-        SYMBOL *newrule = new_rule(next_nonterminal_value);
-        add_rule(newrule);
-        next_nonterminal_value++;
+        // Start of Block
+        if (result == 0x83) {
 
-        fputc(0x83, out); // Start of Block Marker
+            // "Reset Main_Rule"
+            main_rule->next = main_rule;
+            main_rule->prev = main_rule;
 
-        // 0x82 = EOT, 0x85 = RULE DELIMITER, 0x83 = SOB, 0x81 = SOT
-        while(readBytes < bsize) {
+            // "Reset Everything"
+            init_symbols();
+            init_rules();
+            init_digram_hash();
+        }
 
-            result = fgetc(in); // get next byte
-
-            if (result == EOF) {
-                break;
-            }
-
-            SYMBOL *newsym = new_symbol(result, NULL); // NULL because non-terminal
-            insert_after(main_rule->prev, newsym);
-            check_digram(main_rule->prev->prev);
-            readBytes++;
-
-        } // end of while loop (1)_
-
-        fputc(0x82, out); // End of Block Marker
-
-        // SYMBOL *temp = main_rule;
-        // LINKED LIST:
-        // while (temp->next != main_rule) {
-        //     debug("LINKED LIST %d", temp->value);
-        //     temp = temp->next;
-        // }
-
-        // Traverse each rule converting each symbol value into UTF
-        debug("MAIN_AFTER: %p", main_rule->prev);
-        convert_to_utf(main_rule, out);
-
-        if (result == EOF) {
+        // End of Transmission
+        if (result == 0x82 || result == EOF) {
             break;
         }
 
-    } // end of while loop (2)
+        if (result == 0x85) {
+            // RULE DELIMITER
+            continue;
+        }
 
-    fputc(0x84, out); // EOT MARKER
+        // None of the above, so it is a valid char:
+        while(readBytes < bsize) {
+
+            SYMBOL *newsym = new_symbol(result, NULL); // NULL because non-terminal
+            return 0;
+            insert_newsymbol(newsym);
+            check_digram(main_rule->prev->prev);
+
+            readBytes++;
+            result = fgetc(in); // get next byte
+
+        } // end of while loop (1)_
+
+    // Traverse each rule converting each symbol value into UTF
+        convert_to_utf(main_rule, out);
+
+    } // end of while loop (2)
 
     fflush(out);
     return amount_bytes; // end of file
