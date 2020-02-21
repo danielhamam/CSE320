@@ -188,9 +188,6 @@ SYMBOL *ref_rule(SYMBOL *rule) {
  */
 void unref_rule(SYMBOL *rule) {
 
-    // debug("UNREF_RULE");
-
-    // To be implemented.
     int temp;
     temp = rule->refcnt - 1;
     if (temp < 0) {
