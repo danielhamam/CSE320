@@ -237,6 +237,7 @@ int compress(FILE *in, FILE *out, int bsize) {
     int amount_bytes = 0;
     int readBytes = 0;
     bsize = bsize * 1024;
+    // int check_firsttime_trans = 0;
 
     fputc(0x81, out); // SOT MARKER
     amount_bytes++;
@@ -417,7 +418,6 @@ int readCharacter(unsigned int result, FILE *in) {
  * @return  The number of bytes written, in case of success, otherwise EOF.
  */
 int decompress(FILE *in, FILE *out) {
-    // To be implemented.
 
     unsigned int result = 0;
     int firsttime = 0; // to check if head rule has a symbol with it or not

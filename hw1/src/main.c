@@ -27,14 +27,27 @@ int main(int argc, char **argv)
 
     int verify_decompress = global_options & 4;
     if (verify_decompress == 4) {
-        decompress(stdin, stdout);
+        int bytes_decompress = decompress(stdin, stdout);
+        if (bytes_decompress == EOF) {
+            return EXIT_FAILURE;
+        }
+        else {
+            return EXIT_SUCCESS;
+        }
     }
 
     int verify_compress = global_options & 2;
     if (verify_compress == 2) {
 
         if (global_options == 0x4000002) {
-            compress(stdin, stdout, 1024);
+            int bytes_compress = compress(stdin, stdout, 1024);
+            if (bytes_compress == EOF) {
+                printf("EOF FOR COMPRESS");
+                return EXIT_FAILURE;
+            }
+            else {
+                return EXIT_SUCCESS;
+            }
         }
         else {
 
@@ -56,7 +69,13 @@ int main(int argc, char **argv)
                 block_ptr++;
             }
         // -------------------------------------------------
-            compress(stdin, stdout, bsize);
+            int bytes_compress2 = compress(stdin, stdout, bsize);
+            if (bytes_compress2 == EOF ) {
+                return EXIT_FAILURE;
+            }
+            else {
+                return EXIT_SUCCESS;
+            }
         }
     }
     return EXIT_SUCCESS;
