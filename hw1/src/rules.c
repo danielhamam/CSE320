@@ -82,9 +82,6 @@ void init_rules(void) {
  */
 SYMBOL *new_rule(int v) {
 
-    // debug("NEW RULE!");
-
-    // To be implemented.
     // value is nonterminal
     // DECLARE HEADER:
     SYMBOL *newsymbol = new_symbol(v, NULL); // sentinel
@@ -110,7 +107,6 @@ SYMBOL *new_rule(int v) {
  */
 void add_rule(SYMBOL *rule) {
 
-    // debug("ADD_RULE");
     // To be implemented.
     if (main_rule == NULL) {
         // creating an empty, doubly linked circular list.
@@ -119,7 +115,7 @@ void add_rule(SYMBOL *rule) {
         main_rule->prevr = main_rule;
     }
     else {
-        // new rule is inserted at the end of the list. 2 or
+        // new rule is inserted at the end of the list. 2 or more
         main_rule->prevr->nextr = rule; // Second to last node's next is rule
         rule->nextr = main_rule; // new rule's next is head.
         rule->prevr = main_rule->prevr; // new rule's prev is the NOW second to last node.
