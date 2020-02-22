@@ -424,10 +424,16 @@ int decompress(FILE *in, FILE *out) {
     SYMBOL *head_rule; // CURRENTLY SELECTED RULE
     unsigned int firstrulefound = 0;
     int amount_bytes = 0;
+    int check_firsttime_trans = 0;
 
     while (1) {
 
         result = fgetc(in); // unsigned char from fgetc
+
+        if (result != 0x81 && check_firsttime_trans == 0) {
+            return EOF;
+        }
+        check_firsttime_trans = 1;
 
         // Check for start of transmission:
         if (result == 0x81) {
