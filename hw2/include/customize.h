@@ -1,9 +1,16 @@
-/* 
+/*
    This is the customizations file.  It changes our ideas of
    how to read directories.
 */
 
 #define NAMELEN	512		/* max size of a full pathname */
+
+// IF LINUX
+#ifdef linux
+#include <dirent.h>
+#define OPEN DIR // dp was used as return type for readdir, which returns DIR * type.
+#endif
+
 
 #ifdef BSD
 #	include		<sys/dir.h>
@@ -11,6 +18,7 @@
 #	define	READ	struct direct
 #	define	NAME(x)	((x).d_name)
 #endif
+
 
 #ifdef SCO_XENIX
 #	include <sys/ndir.h>

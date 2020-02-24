@@ -8,6 +8,8 @@
  *	alternative.
  */
 
+#include "customize.h" // for h file
+
 #define NAMELENGTH	14
 #ifdef	SYS_III
 	FILE	*opendir(name)	{ return (fopen(name,"r") ); }
@@ -17,7 +19,7 @@
 #define closedir(fp)	fclose(fp)
 
 struct dir_entry {		/* What the system uses internally. */
-    ino_t           d_ino;
+    ino_t           d_ino; // figure out what library ino_t
     char            d_name[NAMELENGTH];
 };
 
@@ -28,12 +30,15 @@ struct direct {			/* What these routines return. */
 };
 
 
+ // if running BSD (specific OS)
+
  /*
   * Read a directory, returning the next (non-empty) slot.
   */
 
-READ           *
-readdir(OPEN *dp) {
+#ifdef BSD
+
+READ *readdir(OPEN *dp) {
     static READ     direct;
 
     /* This read depends on direct being similar to dir_entry. */
@@ -46,3 +51,5 @@ readdir(OPEN *dp) {
 
     return (READ *) NULL;
 }
+
+#endif
