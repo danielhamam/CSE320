@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include "hash.h"
+#include <string.h>
 
 static struct htable *tables[TABLES];
 extern char *malloc();		/* added 6/17/88 */
@@ -40,10 +41,7 @@ static int      hs_tables = 0,	/* number of tables allocated */
   * number, so separate file systems each have their own table.
   */
 
-h_enter(dev, ino)
-    dev_t           dev;
-    ino_t           ino;
-{
+int h_enter(dev_t dev, ino_t ino) {
     static struct htable *tablep = (struct htable *) 0;
     register struct hbucket *bucketp;
     register ino_t *keyp;
@@ -64,9 +62,9 @@ h_enter(dev, ino)
 	    tables[i] = (struct htable *)  malloc(sizeof(struct htable));
 	    if (tables[i] == NULL) {
 		perror("can't malloc hash table");
-		return NEW;
+		return NEW; // NEW = 0, defined in hash.h
 	    };
-#ifdef BSD
+#ifdef BSDi
 	    bzero(tables[i], sizeof(struct htable));
 #else
 	    memset((char *) tables[i], '\0', sizeof (struct htable));
@@ -126,12 +124,10 @@ h_enter(dev, ino)
     return NEW;
 }
 
-
  /* Buffer statistics functions.  Print 'em out. */
 
 #ifdef HSTATS
-void
-h_stats()
+void h_stats()
 {
     fprintf(stderr, "\nHash table management statistics:\n");
     fprintf(stderr, "  Tables allocated: %d\n", hs_tables);
