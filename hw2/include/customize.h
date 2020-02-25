@@ -7,8 +7,10 @@
 
 // IF LINUX
 #ifdef linux
-#include <dirent.h>
-#define OPEN DIR // dp was used as return type for readdir, which returns DIR * type.
+    #include <dirent.h>
+    #define OPEN DIR // dp was used as return type for readdir, which returns DIR * type.
+    #define READ struct dirent
+    #define NAME(x) ((x).d_name)
 #endif
 
 

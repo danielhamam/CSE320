@@ -48,12 +48,13 @@
 */
 
 #include "patchlevel.h"
-
+#include <unistd.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <stdio.h>
+#include <stdlib.h>
 #ifdef	BSD
 #include <strings.h>
 #else
@@ -126,8 +127,6 @@ long            total_sizes, sizes;	/* block count */
 
 char            topdir[NAMELEN];	/* our starting directory */
 
-
-
 /*
 ** Find the last field of a string.
 */
@@ -155,11 +154,11 @@ void down(char *subdir) {
 OPEN	*dp;			/* stream from a directory */
 OPEN	*opendir ();
 char	cwd[NAMELEN], tmp[NAMELEN];
-char	*sptr;
+// char	*sptr;
 READ	*file;			/* directory entry */
 READ	*readdir ();
 int	i, x;
-struct	stat	stb;
+// struct	stat stb;
 
 #ifdef	MEMORY_BASED
 struct RD_list	*head, *tail, *tmp_RD, *tmp1_RD;		/* head and tail of directory list */
@@ -274,7 +273,7 @@ READ		tmp_entry;
 	}
 
 				/* screwy, inefficient, bubble sort	*/
-				/* but it works				*/
+				/* but it works			*/
 	if (sort) {
 		while (tmp_RD) {
 			tmp1_RD = tmp_RD->fptr;
@@ -336,7 +335,7 @@ READ		tmp_entry;
 			tmp_RD = tmp_RD->fptr;
 #else
 		for (file = readdir(dp); file != NULL; file = readdir(dp)) {
-			if ( (strcmp(NAME(*file), "..") != SAME) &&
+			if ( (strcmp((NAME(*file)), "..") != SAME) &&
 			     (strcmp(NAME(*file), ".") != SAME) ) {
 				if (chk_4_dir(NAME(*file))) {
 #endif
@@ -420,16 +419,6 @@ READ		tmp_entry;
 
 } /* down */
 
-int	chk_4_dir(path)
-char	*path;
-{
-	if (is_directory(path)) return TRUE;
-	else return FALSE;
-
-} /* chk_4_dir */
-
-
-
 /* Is the specified path a directory ? */
 
 int	is_directory(char *path) {
@@ -448,7 +437,12 @@ int	is_directory(char *path) {
 	else return FALSE;
 } /* is_directory */
 
+int	chk_4_dir(char *path) {
 
+	if (is_directory(path)) return TRUE;
+	else return FALSE;
+
+} /* chk_4_dir */
 
  /*
   * Get the aged data on a file whose name is given.  If the file is a
@@ -457,7 +451,7 @@ int	is_directory(char *path) {
 
 void get_data(char *path, int cont) {
 /* struct	stat	stb; */
-	int i;
+	// int i;
 
 	if (cont) {
 		if (is_directory(path))
@@ -474,9 +468,6 @@ void get_data(char *path, int cont) {
 		sizes+= K(stb.st_size);
 	}
 } /* get_data */
-
-
-
 int vtree_main(int argc, char *argv[]) {
 	int	i, j, err = FALSE;
 	int	option;

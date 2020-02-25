@@ -9,6 +9,7 @@
  */
 
 #include "customize.h" // for h file
+#include <sys/stat.h> // for ino_t type
 
 #define NAMELENGTH	14
 #ifdef	SYS_III
@@ -19,8 +20,8 @@
 #define closedir(fp)	fclose(fp)
 
 struct dir_entry {		/* What the system uses internally. */
-    ino_t           d_ino; // figure out what library ino_t
-    char            d_name[NAMELENGTH];
+    ino_t d_ino; // figure out what library ino_t
+    char d_name[NAMELENGTH];
 };
 
 struct direct {			/* What these routines return. */
@@ -39,7 +40,7 @@ struct direct {			/* What these routines return. */
 #ifdef BSD
 
 READ *readdir(OPEN *dp) {
-    static READ     direct;
+    static READ direct;
 
     /* This read depends on direct being similar to dir_entry. */
 
