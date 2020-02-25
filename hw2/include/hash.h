@@ -7,6 +7,8 @@
 #define TABLES		50	/* hash tables */
 #define EXTEND		100	/* how much space to add to a bucket */
 
+int h_enter(dev_t dev, ino_t ino); // located in hash.c @ 45 and vtree.c @ 467
+
 struct hbucket {
     int             length;	/* key space allocated */
     int             filled;	/* key space used */

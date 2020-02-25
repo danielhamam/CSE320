@@ -95,11 +95,14 @@ struct RD_list {
 };
 #endif
 
+static void get_data(char *path, int cont); // declare function prototype (STATIC)
+static int chk_4_dir(char *path);
+
 int		indent = 0,		/* current indent */
 		depth = 9999,		/* max depth */
 		cur_depth = 0,
 		sum = FALSE,		/* sum the subdirectories */
-		dup = FALSE,		/* use duplicate inodes */
+		dup_inodes = FALSE,		/* use duplicate inodes */
 		floating = FALSE,	/* floating column widths */
 		sort = FALSE,
 		cnt_inodes = FALSE,	/* count inodes */
@@ -462,7 +465,7 @@ void get_data(char *path, int cont) {
 
 		    /* Don't do it again if we've already done it once. */
 
-		if ( (h_enter(stb.st_dev, stb.st_ino) == OLD) && (!dup) )
+		if ( (h_enter(stb.st_dev, stb.st_ino) == OLD) && (!dup_inodes) )
 			return;
 		inodes++;
 		sizes+= K(stb.st_size);
@@ -488,7 +491,7 @@ int vtree_main(int argc, char *argv[]) {
 						optarg++;
 					}
 					break;
-			case 'd':	dup = TRUE;
+			case 'd':	dup_inodes = TRUE;
 					break;
 			case 'i':	cnt_inodes = TRUE;
 					break;
@@ -498,7 +501,7 @@ int vtree_main(int argc, char *argv[]) {
 			case 't':	sw_summary = TRUE;
 					break;
 			case 'q':	quick = TRUE;
-					dup = FALSE;
+					dup_inodes = FALSE;
 					sum = FALSE;
 					cnt_inodes = FALSE;
 					break;
@@ -536,7 +539,7 @@ int vtree_main(int argc, char *argv[]) {
 
 		if (version>1) {
 			printf("Tree height:	%d\n",depth);
-			if (dup) printf("Include duplicate inodes\n");
+			if (dup_inodes) printf("Include duplicate inodes\n");
 			if (cnt_inodes) printf("Count inodes\n");
 			if (sum) printf("Include unseen subdirectories in totals\n");
 			if (sw_summary) printf("Print totals at end\n");
