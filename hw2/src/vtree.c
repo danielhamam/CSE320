@@ -95,8 +95,9 @@ struct RD_list {
 };
 #endif
 
+// Functions that appear later in class, let's define here
 static void get_data(char *path, int cont); // declare function prototype (STATIC)
-static int chk_4_dir(char *path);
+static int chk_4_dir(char *path); // declare function prototype (STATIC)
 
 int		indent = 0,		/* current indent */
 		depth = 9999,		/* max depth */
@@ -154,6 +155,7 @@ int	last_indent = 0;	/* determine what gets displayed during */
 int	last_subdir = FALSE;	/* the visual display */
 
 void down(char *subdir) {
+
 OPEN	*dp;			/* stream from a directory */
 OPEN	*opendir ();
 char	cwd[NAMELEN], tmp[NAMELEN];
@@ -261,6 +263,7 @@ READ		tmp_entry;
 #ifdef	MEMORY_BASED
 
 	for (file = readdir(dp); file != NULL; file = readdir(dp)) {
+
 		if ((!quick && !visual ) ||
  		    ( strcmp(NAME(*file), "..") != SAME &&
 		     strcmp(NAME(*file), ".") != SAME &&
@@ -269,12 +272,12 @@ READ		tmp_entry;
 			memcpy(&tmp_RD->entry, file, sizeof(tmp_entry));
 			tmp_RD->bptr = head;
 			tmp_RD->fptr = NULL;
+			tail = tmp_RD;
 			if (head == NULL) head = tmp_RD;
 				else tail->fptr = tmp_RD;
-			tail = tmp_RD;
+			// tail = tmp_RD;
 		}
 	}
-
 				/* screwy, inefficient, bubble sort	*/
 				/* but it works			*/
 	if (sort) {
@@ -454,13 +457,15 @@ int	chk_4_dir(char *path) {
 
 void get_data(char *path, int cont) {
 /* struct	stat	stb; */
-	// int i;
+	// int i
 
 	if (cont) {
+
 		if (is_directory(path))
 			down(path);
 	}
 	else {
+
 		if (is_directory(path)) return;
 
 		    /* Don't do it again if we've already done it once. */
@@ -571,12 +576,13 @@ int vtree_main(int argc, char *argv[]) {
 		sub_dirs_indents[i] = 0;
 	}
 
+
     /* Inspect each argument */
 	for (i = optind; i < argc || (!user_file_list_supplied && i == argc); i++) {
 		cur_depth = inodes = sizes = 0;
-
 		chdir(topdir);		/* be sure to start from the same place */
 		get_data(user_file_list_supplied?argv[i] : topdir, TRUE);/* this may change our cwd */
+
 
 		total_inodes += inodes;
 		total_sizes += sizes;

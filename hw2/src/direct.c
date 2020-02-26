@@ -40,6 +40,7 @@ struct direct {			/* What these routines return. */
 #ifdef BSD
 
 READ *readdir(OPEN *dp) {
+
     static READ direct;
 
     /* This read depends on direct being similar to dir_entry. */
