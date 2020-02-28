@@ -262,6 +262,7 @@ READ		tmp_entry;
 
 #ifdef	MEMORY_BASED
 
+	head = NULL;
 	for (file = readdir(dp); file != NULL; file = readdir(dp)) {
 
 		if ((!quick && !visual ) ||
@@ -272,14 +273,16 @@ READ		tmp_entry;
 			memcpy(&tmp_RD->entry, file, sizeof(tmp_entry));
 			tmp_RD->bptr = head;
 			tmp_RD->fptr = NULL;
-			tail = tmp_RD;
+			// tail = tmp_RD;
 			if (head == NULL) head = tmp_RD;
 				else tail->fptr = tmp_RD;
-			// tail = tmp_RD;
+			tail = tmp_RD;
 		}
 	}
 				/* screwy, inefficient, bubble sort	*/
 				/* but it works			*/
+
+	head = tmp_RD;
 	if (sort) {
 		while (tmp_RD) {
 			tmp1_RD = tmp_RD->fptr;
