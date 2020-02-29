@@ -30,14 +30,11 @@ struct direct {			/* What these routines return. */
     char            terminator;
 };
 
-
- // if running BSD (specific OS)
+#ifdef SYS_III
 
  /*
   * Read a directory, returning the next (non-empty) slot.
   */
-
-#ifdef BSD
 
 READ *readdir(OPEN *dp) {
 

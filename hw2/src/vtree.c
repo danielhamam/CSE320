@@ -262,7 +262,8 @@ READ		tmp_entry;
 
 #ifdef	MEMORY_BASED
 
-	head = NULL;
+	head = NULL; // inserted
+	// tail = NULL; // inserted
 	for (file = readdir(dp); file != NULL; file = readdir(dp)) {
 
 		if ((!quick && !visual ) ||
@@ -282,8 +283,8 @@ READ		tmp_entry;
 				/* screwy, inefficient, bubble sort	*/
 				/* but it works			*/
 
-	head = tmp_RD;
 	if (sort) {
+		tmp_RD = head;
 		while (tmp_RD) {
 			tmp1_RD = tmp_RD->fptr;
 			while (tmp1_RD) {

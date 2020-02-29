@@ -6,7 +6,7 @@
 #define NAMELEN	512		/* max size of a full pathname */
 
 // IF LINUX
-#ifdef linux
+#ifdef LINUX
     #include <dirent.h>
     #define OPEN DIR // dp was used as return type for readdir, which returns DIR * type.
     #define READ struct dirent
@@ -52,6 +52,6 @@
 
 #endif
 
-#if !(defined(BSD) || !defined(SYS_V) || !defined(SYS_III) || !defined(SCO_XENIX))
+#if (!defined(BSD) && !defined(SYS_V) && !defined(SYS_III) && !defined(SCO_XENIX) && !defined(LINUX))
 "This is an Error"
 #endif
