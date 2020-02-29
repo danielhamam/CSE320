@@ -263,19 +263,29 @@ READ		tmp_entry;
 #ifdef	MEMORY_BASED
 
 	head = NULL; // inserted
-	// tail = NULL; // inserted
+	tail = NULL; // inserted
 	for (file = readdir(dp); file != NULL; file = readdir(dp)) {
 
 		if ((!quick && !visual ) ||
  		    ( strcmp(NAME(*file), "..") != SAME &&
 		     strcmp(NAME(*file), ".") != SAME &&
 		     chk_4_dir(NAME(*file)) ) ) {
-			tmp_RD = (struct RD_list *) malloc(sizeof(struct RD_list *));
-			memcpy(&tmp_RD->entry, file, sizeof(tmp_entry));
-			tmp_RD->bptr = head;
+			tmp_RD = (struct RD_list *) malloc(sizeof(struct RD_list));
+			memcpy(&tmp_RD->entry, file, sizeof(tmp_RD->entry));
+			// This did a shallow copy, we need a deep copy:
+			strcpy(tmp_RD->entry.d_name, file->d_name);
+			// strncpy(tmp_RD->entry.d_name, file->d_name, strlen(file->d_name) + 1);
+			tmp_RD->entry.d_ino = file->d_ino;
+			tmp_RD->entry.d_off = file->d_off;
+			tmp_RD->entry.d_reclen = file->d_reclen;
+			tmp_RD->entry.d_type = file->d_type;
+			// tmp_RD->bptr = head;
 			tmp_RD->fptr = NULL;
-			// tail = tmp_RD;
-			if (head == NULL) head = tmp_RD;
+			if (head == NULL) {
+				head = tmp_RD;
+				head->fptr = NULL;
+				head->fptr = NULL;
+			}
 				else tail->fptr = tmp_RD;
 			tail = tmp_RD;
 		}
@@ -284,7 +294,7 @@ READ		tmp_entry;
 				/* but it works			*/
 
 	if (sort) {
-		tmp_RD = head;
+		// tmp_RD = head;
 		while (tmp_RD) {
 			tmp1_RD = tmp_RD->fptr;
 			while (tmp1_RD) {
