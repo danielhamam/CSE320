@@ -72,7 +72,7 @@
 #define SAME		0	/* for strcmp */
 #define BLOCKSIZE	512	/* size of a disk block */
 
-#define K(x)		((x + BLOCKSIZE)/1024)	/* convert stat(2) blocks into
+#define K(x)		((x * BLOCKSIZE)/1024)	/* convert stat(2) blocks into
 					 * k's.  On my machine, a block
 					 * is 512 bytes. */
 
