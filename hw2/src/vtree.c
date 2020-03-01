@@ -72,7 +72,7 @@
 #define SAME		0	/* for strcmp */
 #define BLOCKSIZE	512	/* size of a disk block */
 
-#define K(x)		((x + 1023)/1024)	/* convert stat(2) blocks into
+#define K(x)		((x + BLOCKSIZE)/1024)	/* convert stat(2) blocks into
 					 * k's.  On my machine, a block
 					 * is 512 bytes. */
 
@@ -475,19 +475,24 @@ void get_data(char *path, int cont) {
 
 	if (cont) {
 
-		if (is_directory(path))
+		if (is_directory(path)) {
+			inodes += 1; // takes into account directories themselves (1)
 			down(path);
+		}
 	}
 	else {
 
-		if (is_directory(path)) return;
+		if (is_directory(path)) {
+			inodes += 1; // takes into account directories themselves (2)
+			return;
+		}
 
 		    /* Don't do it again if we've already done it once. */
 
 		if ( (h_enter(stb.st_dev, stb.st_ino) == OLD) && (!dup_inodes) )
 			return;
 		inodes++;
-		sizes+= K(stb.st_size);
+		sizes+= K(stb.st_blocks); // chage to number of blocks actually used.
 	}
 } /* get_data */
 int vtree_main(int argc, char *argv[]) {
