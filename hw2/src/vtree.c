@@ -476,14 +476,15 @@ void get_data(char *path, int cont) {
 	if (cont) {
 
 		if (is_directory(path)) {
-			inodes += 1; // takes into account directories themselves (1)
+			inodes = inodes + 1; // takes into account directories themselves (1)
+			sizes = sizes + 4;
 			down(path);
 		}
 	}
 	else {
 
 		if (is_directory(path)) {
-			inodes += 1; // takes into account directories themselves (2)
+			// inodes += 1; // takes into account directories themselves (2)
 			return;
 		}
 
