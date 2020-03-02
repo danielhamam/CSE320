@@ -270,7 +270,7 @@ READ		tmp_entry;
  		    ( strcmp(NAME(*file), "..") != SAME &&
 		     strcmp(NAME(*file), ".") != SAME &&
 		     chk_4_dir(NAME(*file)) ) ) {
-			tmp_RD = (struct RD_list *) malloc(sizeof(struct RD_list));
+			tmp_RD = (struct RD_list *) calloc(1, sizeof(struct RD_list));
 			memcpy(&tmp_RD->entry, file, sizeof(tmp_RD->entry));
 			// This did a shallow copy, we need a deep copy:
 			strcpy(tmp_RD->entry.d_name, file->d_name);
