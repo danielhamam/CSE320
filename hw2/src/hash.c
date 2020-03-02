@@ -35,6 +35,22 @@ static int      hs_tables = 0,	/* number of tables allocated */
                 hs_longsearch = 0;	/* longest search */
 
 
+void init_table() {
+
+  // For bucketp array:
+  int highest;
+  for (highest = 0; highest < 200; highest++) {
+    ino_holder[highest] = NULL;
+  }
+
+  // For hash table array:
+  int highest2;
+  for (highest2 = 0; highest2 < 200; highest2++) {
+    htable_holder[highest] = NULL;
+  }
+
+}
+
  /*
   * This routine takes in a device/inode, and tells whether it's been
   * entered in the table before.  If it hasn't, then the inode is added
@@ -61,6 +77,19 @@ int h_enter(dev_t dev, ino_t ino) {
 	    i++;
 	if (!tables[i]) {
 	    tables[i] = (struct htable *)  malloc(sizeof(struct htable));
+
+// -----------------------------------------------------
+      // Add to holder array:
+      int free_index1 = 0;
+      while (1) {
+        if (htable_holder[free_index1] == NULL) {
+          htable_holder[free_index1] = tables[i];
+          break; // use this free_index
+        }
+        free_index1++;
+      } // end of while loop
+// -----------------------------------------------------
+
 	    if (tables[i] == NULL) {
 		perror("can't malloc hash table");
 		return NEW; // NEW = 0, defined in hash.h
@@ -103,6 +132,19 @@ int h_enter(dev_t dev, ino_t ino) {
 	/* No room, extend the key list. */
 	if (!bucketp->length) {
 	    bucketp->keys = (ino_t *) calloc(EXTEND, sizeof(ino_t));
+
+// -----------------------------------------------------
+      // Add to holder array:
+      int free_index = 0;
+      while (1) {
+        if (ino_holder[free_index] == NULL) {
+          ino_holder[free_index] = bucketp->keys;
+          break; // use this free_index
+        }
+        free_index++;
+      } // end of while loop
+// -----------------------------------------------------
+
 	    if (bucketp->keys == NULL) {
 		perror("can't malloc hash bucket");
 		return NEW;

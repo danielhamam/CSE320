@@ -407,9 +407,10 @@ READ		tmp_entry;
 	tmp_RD = head;
 	while (tmp_RD) {
 		struct RD_list *holder = tmp_RD->fptr;
-		free(tmp_RD);
+		free(tmp_RD); // was originally bugged, not properly freeing (was reaccessing it after free)
 		tmp_RD = holder;
 	}
+
 #endif
 
 	if (visual && indented) {
@@ -465,6 +466,23 @@ int	chk_4_dir(char *path) {
 
 } /* chk_4_dir */
 
+void clear_hash() {
+
+	// Free keys of bucketp
+	int limit;
+	for (limit = 0; limit < 200; limit++) {
+		if (ino_holder != NULL) free(ino_holder[limit]);
+	}
+
+	// Free the memory of hash table
+	int limit2;
+	for (limit2 = 0; limit2 < 200; limit2++) {
+		if (htable_holder != NULL) free(htable_holder[limit2]);
+	}
+
+
+} // end of clear_hash()
+
  /*
   * Get the aged data on a file whose name is given.  If the file is a
   * directory, go down into it, and get the data from all files inside.
@@ -498,6 +516,7 @@ void get_data(char *path, int cont) {
 	}
 } /* get_data */
 int vtree_main(int argc, char *argv[]) {
+	init_table();
 	int	i, j, err = FALSE;
 	int	option;
 	int	user_file_list_supplied = 0;
@@ -618,5 +637,6 @@ int vtree_main(int argc, char *argv[]) {
 	fflush(stdout);
 	h_stats();
 #endif
+	clear_hash();
 	exit(0);
 } /* main */
