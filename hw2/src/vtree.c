@@ -406,8 +406,9 @@ READ		tmp_entry;
 				/* free the allocated memory */
 	tmp_RD = head;
 	while (tmp_RD) {
+		struct RD_list *holder = tmp_RD->fptr;
 		free(tmp_RD);
-		tmp_RD = tmp_RD->fptr;
+		tmp_RD = holder;
 	}
 #endif
 
