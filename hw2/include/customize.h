@@ -11,7 +11,7 @@
     #define OPEN DIR // dp was used as return type for readdir, which returns DIR * type.
     #define READ struct dirent
     #define NAME(x) ((x).d_name)
-    // #define  INO(x)  ((x).d_ino)
+    #define INO(x)  ((x).d_ino)
 #endif
 
 
