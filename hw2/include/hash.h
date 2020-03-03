@@ -8,6 +8,7 @@
 #define EXTEND		100	/* how much space to add to a bucket */
 
 int h_enter(dev_t dev, ino_t ino); // located in hash.c @ 45 and vtree.c @ 467
+void h_stats(); // located in hash.c @ 173 and vtree.c @ 662
 void init_table();
 
 // Arrays to hold the pointers from hash_table and bucketp.
