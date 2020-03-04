@@ -111,7 +111,7 @@ int		indent = 0,		/* current indent */
 		quick = FALSE,		/* quick display */
 		visual = FALSE,		/* visual display */
 		version = 0,		/* = 1 display version, = 2 show options */
-		sw_follow_links = FALSE,	/* follow symbolic links */
+		sw_follow_links = TRUE,	/* follow symbolic links */
 		sub_dirs[MAX_V_DEPTH],
 		sub_dirs_indents[MAX_V_DEPTH];
 
@@ -440,10 +440,12 @@ READ		tmp_entry;
 int	is_directory(char *path) {
 
 #ifdef LSTAT
-	if (sw_follow_links)
+	if (sw_follow_links) {
 		stat(path, &stb);	/* follows symbolic links */
-	else
+	}
+	else {
 		lstat(path, &stb);	/* doesn't follow symbolic links */
+	}
 #else
 	stat(path, &stb);
 #endif
@@ -548,8 +550,7 @@ int vtree_main(int argc, char *argv[]) {
 					break;
 			// -------------------------------------------------------
 			#ifdef LSTAT
-				case 'l':
-					sw_follow_links = TRUE; // inserted
+				case 'l':   sw_follow_links = FALSE; // inserted
 					break;
 			#endif
 			// -------------------------------------------------------
