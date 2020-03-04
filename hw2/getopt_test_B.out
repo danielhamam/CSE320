@@ -1,0 +1,5 @@
+tests/rsrc/test_tree
+test_tree-+-> S ---------+-> a
+                          +-> c
+                          +-> b
+                          \-> d

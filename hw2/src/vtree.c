@@ -111,6 +111,7 @@ int		indent = 0,		/* current indent */
 		quick = FALSE,		/* quick display */
 		visual = FALSE,		/* visual display */
 		version = 0,		/* = 1 display version, = 2 show options */
+		sw_follow_links = FALSE,	/* follow symbolic links */
 		sub_dirs[MAX_V_DEPTH],
 		sub_dirs_indents[MAX_V_DEPTH];
 
@@ -124,7 +125,6 @@ extern int      optind,
 
 
 char           *Program;		/* our name */
-short           sw_follow_links = 1;	/* follow symbolic links */
 short           sw_summary;		/* print Grand Total line */
 
 int             total_inodes, inodes;	/* inode count */
@@ -528,21 +528,18 @@ int vtree_main(int argc, char *argv[]) {
 		{"duplicates", no_argument, 0, 'd'},
 		{"floating-column-widths", no_argument, 0, 'f'},
 		{"height", no_argument, 0, 'h'},
-		{"inodes", no_argument, 0, 'i'},
+		{"inodes", required_argument, 0, 'i'},
 		{"sort-directories", no_argument, 0, 'o'},
 		{"totals", no_argument, 0, 't'},
 		{"quick-display", no_argument, 0, 'q'},
-		{"visual-display", no_argument, 0, 'v'},
+		{"visual-display", no_argument, NULL, 'v'},
 		{"version", no_argument, 0, 'V'},
-		// New Option '-l':
-		#ifdef LSTAT
-			{"no-follow-symlinks", no_argument, 0, 'l'},
-		#endif
+		{"no-follow-symlinks", no_argument, 0, 'l'}, // new option 'l'
 	};
 
     /* Pick up options from command line */
 
-	while ((option = getopt_long(argc, argv, "dfh:iostqvV", case_options, NULL)) != EOF) {
+	while ((option = getopt_long(argc, argv, "dfh:iostlqvV", case_options, NULL)) != EOF) {
 		switch (option) {
 			case 'f':	floating = TRUE; break;
 			case 'h':	depth = atoi(optarg);
@@ -554,13 +551,25 @@ int vtree_main(int argc, char *argv[]) {
 						optarg++;
 					}
 					break;
-			case 'l':   sw_follow_links = 0;
+			// -------------------------------------------------------
+			#ifdef LSTAT
+				case 'l':
+					sw_follow_links = TRUE; // inserted
 					break;
+			#endif
+			// -------------------------------------------------------
+
 			case 'd':	dup_inodes = TRUE;
 					break;
 			case 'i':	cnt_inodes = TRUE;
 					break;
-			case 'o':	sort = TRUE; break;
+
+			// -------------------------------------------------------
+			#ifdef MEMORY_BASED
+				case 'o':	sort = TRUE;
+					break;
+			#endif
+			// -------------------------------------------------------
 			case 's':	sum = TRUE;
 					break;
 			case 't':	sw_summary = TRUE;
