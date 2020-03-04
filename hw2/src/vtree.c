@@ -476,7 +476,6 @@ void clear_hash() {
 		if (htable_holder != NULL) free(htable_holder[limit2]);
 	}
 
-
 } // end of clear_hash()
 
  /*
