@@ -275,13 +275,7 @@ READ		tmp_entry;
 
 			tmp_RD = malloc(sizeof(struct RD_list));
 			memcpy(&tmp_RD->entry, file, sizeof(tmp_RD->entry));
-			// We had a shallow copy, we need a deep copy:
-			tmp_RD->entry.d_ino = file->d_ino;
-			tmp_RD->entry.d_off = file->d_off;
-			tmp_RD->entry.d_reclen = file->d_reclen;
-			tmp_RD->entry.d_type = file->d_type;
-			strcpy(tmp_RD->entry.d_name, file->d_name);
-			//
+
 			tmp_RD->bptr = head;
 			tmp_RD->fptr = NULL;
 			if (head == NULL) head = tmp_RD;
@@ -496,7 +490,7 @@ void get_data(char *path, int cont) {
 
 		if (is_directory(path)) {
 			inodes = inodes + 1; // takes into account directories themselves (1)
-			sizes = sizes + 4;
+			sizes+= 4; // chage to number of blocks actually used.
 			down(path);
 		}
 	}
@@ -524,7 +518,7 @@ int vtree_main(int argc, char *argv[]) {
 
 
 	// Let's set up for getopt_long
-	struct option case_options[] = {
+	static struct option case_options[] = {
 		{"duplicates", no_argument, 0, 'd'},
 		{"floating-column-widths", no_argument, 0, 'f'},
 		{"height", no_argument, 0, 'h'},
@@ -535,6 +529,7 @@ int vtree_main(int argc, char *argv[]) {
 		{"visual-display", no_argument, NULL, 'v'},
 		{"version", no_argument, 0, 'V'},
 		{"no-follow-symlinks", no_argument, 0, 'l'}, // new option 'l'
+		{ 0, 0, 0, 0,}
 	};
 
     /* Pick up options from command line */
