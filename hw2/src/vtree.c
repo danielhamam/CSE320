@@ -292,7 +292,7 @@ READ		tmp_entry;
 			// tmp1_RD = tmp_RD->fptr;
 			tmp1_RD = tmp_RD;
 			while (tmp1_RD) {
-				if (strcmp(tmp_RD->entry.d_name, tmp1_RD->entry.d_name) > 0) {
+				if (strcmp(tmp_RD->entry.d_name, tmp1_RD->entry.d_name) > 0) { // CHANGED TO STRCMP()
 					/* swap the two */
 						memcpy(&tmp_entry, &tmp_RD->entry, sizeof(tmp_entry));
 						memcpy(&tmp_RD->entry, &tmp1_RD->entry, sizeof(tmp_entry));
