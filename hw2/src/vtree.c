@@ -512,7 +512,7 @@ void get_data(char *path, int cont) {
 } /* get_data */
 int vtree_main(int argc, char *argv[]) {
 	init_table();
-	int	i, j, err = FALSE;
+	int	i, err = FALSE;
 	int	option;
 	int	user_file_list_supplied = 0;
 	Program = *argv;		/* save our name for error messages */
