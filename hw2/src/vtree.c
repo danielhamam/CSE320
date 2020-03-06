@@ -522,8 +522,8 @@ int vtree_main(int argc, char *argv[]) {
 	static struct option case_options[] = {
 		{"duplicates", no_argument, 0, 'd'},
 		{"floating-column-widths", no_argument, 0, 'f'},
-		{"height", no_argument, 0, 'h'},
-		{"inodes", required_argument, 0, 'i'},
+		{"height", required_argument, 0, 'h'},
+		{"inodes", no_argument, 0, 'i'},
 		{"sort-directories", no_argument, 0, 'o'},
 		{"totals", no_argument, 0, 't'},
 		{"quick-display", no_argument, 0, 'q'},
@@ -659,7 +659,7 @@ int vtree_main(int argc, char *argv[]) {
 
 	if (sw_summary) {
 		printf("\n\nTotal space used: %ld\n",total_sizes);
-		if (cnt_inodes) printf("Total inodes: %d\n",inodes);
+		if (cnt_inodes) printf("Total inodes: %d\n",total_inodes);
 	}
 
 #ifdef HSTATS
