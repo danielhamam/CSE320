@@ -527,7 +527,7 @@ int vtree_main(int argc, char *argv[]) {
 		{"sort-directories", no_argument, 0, 'o'},
 		{"totals", no_argument, 0, 't'},
 		{"quick-display", no_argument, 0, 'q'},
-		{"visual-display", no_argument, NULL, 'v'},
+		{"visual-display", no_argument, 0, 'v'},
 		{"version", no_argument, 0, 'V'},
 		{"no-follow-symlinks", no_argument, 0, 'l'}, // new option 'l'
 		{ 0, 0, 0, 0,}
@@ -581,7 +581,19 @@ int vtree_main(int argc, char *argv[]) {
 			default:	err = TRUE;
 		}
 		if (err) {
-			fprintf(stderr,"%s: [ -d ] [ -h # ] [ -i ] [ -o ] [ -s ] [ -q ] [ -v ] [ -V ]\n",Program);
+
+		#if defined (LSTAT) && defined (MEMORY_BASED)
+				fprintf(stderr,"%s: [ -d ] [ -h # ] [ -i ] [ -l ] [ -o ] [ -s ] [ -q ] [ -v ] [ -V ]\n",Program);
+		#elif LSTAT
+				fprintf(stderr,"%s: [ -d ] [ -h # ] [ -i ] [ -l ] [ -s ] [ -q ] [ -v ] [ -V ]\n",Program);
+		#elif MEMORY_BASED
+				fprintf(stderr,"%s: [ -d ] [ -h # ] [ -i ] [ -o ] [ -s ] [ -q ] [ -v ] [ -V ]\n",Program);
+		#else
+				fprintf(stderr,"%s: [ -d ] [ -h # ] [ -i ] [ -s ] [ -q ] [ -v ] [ -V ]\n",Program);
+		#endif
+			// -----------------------------------------------------------------------------------------------
+			// -----------------------------------------------------------------------------------------------
+
 			fprintf(stderr,"	-d	count duplicate inodes\n");
 			fprintf(stderr,"	-f	floating column widths\n");
 			#ifdef LSTAT
