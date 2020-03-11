@@ -1,0 +1,131 @@
+[----] Criterion v2.3.2
+[====] Running 4 tests from basecode_tests_suite:
+[RUN ] basecode_tests_suite::help_system_test
+USAGE: bin/sequitur [-h] -c|-d [-b]
+   -h       Help: displays this help menu.
+   -c       Compress: read bytes from standard input, output compressed data to standard output.
+   -d       Decompress: read compressed data from standard input, output raw data to standard output.
+            Optional additional parameter for -c (not permitted with -d):
+               -b           BLOCKSIZE is the blocksize (in Kbytes, range [1, 1024])
+                            to be used in compression.
+
+[PASS] basecode_tests_suite::help_system_test: (0.00s)
+[RUN ] basecode_tests_suite::validargs_compress_test
+[PASS] basecode_tests_suite::validargs_compress_test: (0.00s)
+[RUN ] basecode_tests_suite::validargs_error_test
+[PASS] basecode_tests_suite::validargs_error_test: (0.00s)
+[RUN ] basecode_tests_suite::validargs_help_test
+[PASS] basecode_tests_suite::validargs_help_test: (0.00s)
+[====] Running 2 tests from blackbox_suite:
+[RUN ] blackbox_suite::blackbox_pipecomp_1
+[PASS] blackbox_suite::blackbox_pipecomp_1: (0.04s)
+[RUN ] blackbox_suite::blackbox_pipedecomp_1
+[PASS] blackbox_suite::blackbox_pipedecomp_1: (0.01s)
+[====] Running 7 tests from compress_suite:
+[RUN ] compress_suite::comp_ret_1
+[PASS] compress_suite::comp_ret_1: (0.00s)
+[RUN ] compress_suite::comp_ret_2
+[PASS] compress_suite::comp_ret_2: (0.01s)
+[RUN ] compress_suite::comp_ret_3
+Symbol storage is exhausted! Can not create new symbol.[----] tests/hw1_grading_tests.c:968: Unexpected signal caught below this line!
+[FAIL] compress_suite::comp_ret_3: CRASH!
+[RUN ] compress_suite::compress_2mb
+Symbol storage is exhausted! Can not create new symbol.[----] tests/hw1_grading_tests.c:839: Unexpected signal caught below this line!
+[FAIL] compress_suite::compress_2mb: CRASH!
+[RUN ] compress_suite::compress_empty
+[----] tests/hw1_grading_tests.c:830: Assertion failed: Wrong return value from function: expected 2, was 6
+[FAIL] compress_suite::compress_empty: (0.00s)
+[RUN ] compress_suite::inverse_1
+[PASS] compress_suite::inverse_1: (0.01s)
+[RUN ] compress_suite::inverse_2
+[PASS] compress_suite::inverse_2: (0.01s)
+[====] Running 6 tests from decompress_suite:
+[RUN ] decompress_suite::decomp_empty
+[PASS] decompress_suite::decomp_empty: (0.00s)
+[RUN ] decompress_suite::decomp_no_eot
+Symbol storage is exhausted! Can not create new symbol.[----] tests/hw1_grading_tests.c:711: Unexpected signal caught below this line!
+[FAIL] decompress_suite::decomp_no_eot: CRASH!
+[RUN ] decompress_suite::decomp_trunc
+Symbol storage is exhausted! Can not create new symbol.[----] tests/hw1_grading_tests.c:752: Unexpected signal caught below this line!
+[FAIL] decompress_suite::decomp_trunc: CRASH!
+[RUN ] decompress_suite::decomp_trunc_compare
+Symbol storage is exhausted! Can not create new symbol.[----] tests/hw1_grading_tests.c:773: Unexpected signal caught below this line!
+[FAIL] decompress_suite::decomp_trunc_compare: CRASH!
+[RUN ] decompress_suite::decomp_unexp_sob
+[----] tests/hw1_grading_tests.c:742: Assertion failed: Wrong return value from function: expected -1, was 1016
+[FAIL] decompress_suite::decomp_unexp_sob: (0.00s)
+[RUN ] decompress_suite::decomp_valid_compare
+[PASS] decompress_suite::decomp_valid_compare: (0.00s)
+[====] Running 12 tests from digram_suite:
+[RUN ] digram_suite::digram_delete_1
+[PASS] digram_suite::digram_delete_1: (0.00s)
+[RUN ] digram_suite::digram_delete_2
+[PASS] digram_suite::digram_delete_2: (0.00s)
+[RUN ] digram_suite::digram_delete_3
+[PASS] digram_suite::digram_delete_3: (0.00s)
+[RUN ] digram_suite::digram_get_1
+[PASS] digram_suite::digram_get_1: (0.00s)
+[RUN ] digram_suite::digram_get_2
+[PASS] digram_suite::digram_get_2: (0.00s)
+[RUN ] digram_suite::digram_get_3
+[PASS] digram_suite::digram_get_3: (0.00s)
+[RUN ] digram_suite::digram_get_4
+[----] tests/hw1_grading_tests.c:511: Assertion failed: failed lookup on an existing digram (wrapping around the table with TOMBSTONEs)
+[FAIL] digram_suite::digram_get_4: (0.02s)
+[RUN ] digram_suite::digram_put_1
+[PASS] digram_suite::digram_put_1: (0.00s)
+[RUN ] digram_suite::digram_put_2
+[PASS] digram_suite::digram_put_2: (0.00s)
+[RUN ] digram_suite::digram_put_3
+[----] tests/hw1_grading_tests.c:644: Unexpected signal caught below this line!
+[FAIL] digram_suite::digram_put_3: CRASH!
+[RUN ] digram_suite::digram_put_4
+[PASS] digram_suite::digram_put_4: (0.00s)
+[RUN ] digram_suite::init_digram_hash_1
+[PASS] digram_suite::init_digram_hash_1: (0.03s)
+[====] Running 4 tests from rules_suite:
+[RUN ] rules_suite::add_rule_1
+[PASS] rules_suite::add_rule_1: (0.00s)
+[RUN ] rules_suite::init_rules
+[----] tests/hw1_grading_tests.c:324: Assertion failed: rule_map at index 0 not NULL!
+[FAIL] rules_suite::init_rules: (0.00s)
+[RUN ] rules_suite::new_rule_1
+[PASS] rules_suite::new_rule_1: (0.00s)
+[RUN ] rules_suite::new_rule_2
+[PASS] rules_suite::new_rule_2: (0.00s)
+[====] Running 4 tests from symbols_suite:
+[RUN ] symbols_suite::init_symbols
+[PASS] symbols_suite::init_symbols: (0.00s)
+[RUN ] symbols_suite::new_symbol_1
+[PASS] symbols_suite::new_symbol_1: (0.00s)
+[RUN ] symbols_suite::new_symbol_2
+[PASS] symbols_suite::new_symbol_2: (0.00s)
+[RUN ] symbols_suite::new_symbol_3
+Symbol storage is exhausted! Can not create new symbol.[PASS] symbols_suite::new_symbol_3: (0.00s)
+[====] Running 12 tests from validargs_suite:
+[RUN ] validargs_suite::validargs_1
+[PASS] validargs_suite::validargs_1: (0.00s)
+[RUN ] validargs_suite::validargs_10
+[PASS] validargs_suite::validargs_10: (0.00s)
+[RUN ] validargs_suite::validargs_11
+[PASS] validargs_suite::validargs_11: (0.00s)
+[RUN ] validargs_suite::validargs_12
+[PASS] validargs_suite::validargs_12: (0.00s)
+[RUN ] validargs_suite::validargs_2
+[PASS] validargs_suite::validargs_2: (0.00s)
+[RUN ] validargs_suite::validargs_3
+[PASS] validargs_suite::validargs_3: (0.00s)
+[RUN ] validargs_suite::validargs_4
+[PASS] validargs_suite::validargs_4: (0.00s)
+[RUN ] validargs_suite::validargs_5
+[PASS] validargs_suite::validargs_5: (0.00s)
+[RUN ] validargs_suite::validargs_6
+[PASS] validargs_suite::validargs_6: (0.00s)
+[RUN ] validargs_suite::validargs_7
+[PASS] validargs_suite::validargs_7: (0.00s)
+[RUN ] validargs_suite::validargs_8
+[PASS] validargs_suite::validargs_8: (0.00s)
+[RUN ] validargs_suite::validargs_9
+[PASS] validargs_suite::validargs_9: (0.00s)
+[----] Writing xml report in `crit.xml`.
+[====] Synthesis: Tested: 51 | Passing: 41 | Failing: 10 | Crashing: 6 
