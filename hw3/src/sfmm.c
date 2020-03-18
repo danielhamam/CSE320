@@ -18,7 +18,7 @@ size_t calculateSize(size_t size) {
     return blocksize;
 }
 
-void find_freelist(size_t blocksize) {
+void *find_freelist(size_t blocksize) {
     int index =  blocksize / 64;
 
     // First, we start with the first size class from int index
@@ -31,23 +31,55 @@ void find_freelist(size_t blocksize) {
         while (targetBlock != &sentinelBlock) { // end of free list equal to &sentinelBlock
 
             // check if you found
-            int amountSize = targetBlock->header & 0x11111100; // get size excluding last 2 bits (which check allocation)
-            if (amountSize >= blocksize) {
-                // found the correct block size
-                // 1. split it if required
-                // 2. lower part = allocation request, upper part = remainder
-
-            targetBlock = targetBlock->body.links.next; // get next
+            int amountSize = targetBlock->header & BLOCK_SIZE_MASK; // get size excluding last 2 bits (which check allocation)
+            if (amountSize == blocksize) {
+                // found the correct EXACT block size
+                // remove free list from free list
+                void *payloadPtr = targetBlock->body.payload;
+                return payloadPtr;
             }
+            else if (amountSize > blocksize) {
+                // 1. split it
+                  // make a new block with that size?
+                // 2. lower part = allocation request, upper part = remainder
+            }
+            targetBlock = targetBlock->body.links.next; // get next
         } // end of inner while loop
         index++;
     } // end of first while loop
 
     // if you make it here, then no block was big enough!
     // must use sf_mem_grow to request more memory (if not possible, sf_errno = ENOmem, and return NULL)
-
+    return NULL;
 }
 
+void initialize_heap() {
+    sf_mem_init();
+    void *startHeap = sf_mem_grow(); // beginning of heap
+    startHeap += 48; // 56 bytes (7 rows x 8), but 8 bytes for footer so 48. ("overlaps the last 8 bytes of padding")
+
+    // INITIALIZE THE PROLOGUE BLOCK
+    sf_block *prologue = (sf_block *) startHeap;
+    prologue->header = (size_t) 67; // 1000011 allocated is 1, prev_allocated is 1
+    startHeap += 64; // 6 unused rows of padding x 8 bytes each (block is 64 bytes) --> 48 + 16 (links)
+    // Set the footer since we're at that address:
+    sf_block *prologue2 = (sf_block *) startHeap;
+    prologue2->prev_footer = (size_t) 67; // belongs to prologue (this is the prologue footer)    PROLOGUE HEADER = FOOTER (CONTENTS)
+
+    // THE WILDERNESS BLOCK ("inserted into the free list as a single block")
+    startHeap += 32; // links/header
+
+    sf_block *wilderness = (sf_block *) startHeap;
+    int space = (sf_mem_end() - startHeap) - 8;
+    debug("SPACE: %d", space);
+    wilderness->prev_footer = (size_t) 67;
+    wilderness->header = (size_t) space;
+
+    // INITIALIZE THE EPILOGUE BLOCK
+    void *endHeap = sf_mem_end() - 8;
+    sf_block *epilogue = (sf_block *) endHeap;
+    epilogue->header = (size_t) 67; // 1000011 allocated is 1, prev_allocated is 1
+}
 // -----------------------------------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------------------------------
@@ -56,27 +88,33 @@ int first_allocation = 0;
 void *sf_malloc(size_t size) {
 
     // Segregated by size class
+    void *payloadPtr = NULL;
 
     // if size is 0, return NULL
-    if (size == 0) return NULL; // without setting sf_errno
+    if (size <= 0) return NULL; // without setting sf_errno
     else {
         // CHECK IF FIRST ALLOCATION REQUEST
         if (first_allocation == 0) {
-            sf_mem_init();
-            sf_mem_grow();
+            initialize_heap();
+            return payloadPtr;
             first_allocation = 1;
         }
 
         size_t blocksize = calculateSize(size);
-        find_freelist(blocksize); // Determine smallest free list to satisfy a request of that size
-
+        payloadPtr = find_freelist(blocksize); // Determine smallest free list to satisfy a request of that size
+        return payloadPtr;
     }
-
-    return NULL;
+    return payloadPtr;
 }
 
 void sf_free(void *pp) {
-    return;
+
+    // find address of the block
+    sf_header *blockHead = pp - sizeof(sf_header);
+    int allocated = (*blockHead) & THIS_BLOCK_ALLOCATED;
+    if (!allocated || pp == NULL) abort(); // "if ptr is invalid, call abort()"
+
+    (*blockHead) = (*blockHead) & 0xfffffffe; // clear allocated bit --> free bit
 }
 
 void *sf_realloc(void *pp, size_t rsize) {

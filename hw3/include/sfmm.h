@@ -50,8 +50,8 @@
     |                               Pointer to previous free block                            |
     |                                        (1 row)                                          |
     +-----------------------------------------------------------------------------------------+
-    |                                                                                         | 
-    |                                         Unused                                          | 
+    |                                                                                         |
+    |                                         Unused                                          |
     |                                        (N rows)                                         |
     |                                                                                         |
     |                                                                                         |
@@ -108,7 +108,7 @@ typedef struct sf_block {
     |                                         unused                                          | padding
     |                                        (7 rows)                                         |
     +--------------------------------------------+------------------------+---------+---------+ <- prologue start
-    |                                     block_size (= 64)               |prv alloc|  alloc  | 
+    |                                     block_size (= 64)               |prv alloc|  alloc  |
     |                                  (2 LSB's implicitly 0)             |   (1)   |   (1)   | prologue
     |                                         (1 row)                     |  1 bit  |  1 bit  | header
     +--------------------------------------------+------------------------+---------+---------+ <- (aligned)
