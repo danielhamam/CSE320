@@ -67,18 +67,25 @@ void initialize_heap() {
     prologue2->prev_footer = (size_t) 67; // belongs to prologue (this is the prologue footer)    PROLOGUE HEADER = FOOTER (CONTENTS)
 
     // THE WILDERNESS BLOCK ("inserted into the free list as a single block")
-    startHeap += 32; // links/header
+    // startHeap += 8; // links/header
 
     sf_block *wilderness = (sf_block *) startHeap;
-    int space = (sf_mem_end() - startHeap) - 8;
+    int space = ((sf_mem_end() - 16) - startHeap);
     debug("SPACE: %d", space);
     wilderness->prev_footer = (size_t) 67;
     wilderness->header = (size_t) space;
 
+    sf_free_list_heads[NUM_FREE_LISTS - 1].body.links.next = (wilderness);
+    sf_free_list_heads[NUM_FREE_LISTS - 1].body.links.prev = (wilderness);
+    wilderness->body.links.next = &sf_free_list_heads[NUM_FREE_LISTS - 1];
+    wilderness->body.links.prev = &sf_free_list_heads[NUM_FREE_LISTS - 1];
+
+
     // INITIALIZE THE EPILOGUE BLOCK
-    void *endHeap = sf_mem_end() - 8;
+    void *endHeap = sf_mem_end() - 16; // because 8 is the footer
     sf_block *epilogue = (sf_block *) endHeap;
-    epilogue->header = (size_t) 67; // 1000011 allocated is 1, prev_allocated is 1
+    epilogue->prev_footer = (size_t) space;
+    epilogue->header = (size_t) 1; // 1000011 allocated is 1, prev_allocated is 1
 }
 // -----------------------------------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------------------------------
