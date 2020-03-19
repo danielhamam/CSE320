@@ -133,8 +133,15 @@ void *find_freelist(size_t blocksize) {
             int amountSize = targetBlock->header & BLOCK_SIZE_MASK; // get size excluding last 2 bits (which check allocation)
             if (amountSize == blocksize) {
                 // found the correct EXACT block size
-                // remove free list from free list
+
+                // REMOVE FREE LIST FROM ARRAY
+                sf_block *nextTargetBlock = targetBlock->body.links.next;
+                sf_block *prevTargetBlock = targetBlock->body.links.prev;
+                nextTargetBlock->body.links.prev = targetBlock->body.links.prev; // REMOVE FROM FREE LIST
+                prevTargetBlock->body.links.next = targetBlock->body.links.next;
+
                 void *payloadPtr = targetBlock->body.payload;
+
                 return payloadPtr;
             }
             else if (amountSize > blocksize) {
