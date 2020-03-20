@@ -13,6 +13,7 @@
 void initialize_heap();
 size_t calculateSize(size_t size);
 void *find_freelist(size_t blocksize);
+size_t insertFreeBlock(int remainder);
 
 int first_allocation = 0;
 void *sf_malloc(size_t size) {
@@ -26,13 +27,12 @@ void *sf_malloc(size_t size) {
         // CHECK IF FIRST ALLOCATION REQUEST
         if (first_allocation == 0) {
             initialize_heap();
-            return payloadPtr;
+            // return payloadPtr;
             first_allocation = 1;
         }
 
         size_t blocksize = calculateSize(size);
         payloadPtr = find_freelist(blocksize); // Determine smallest free list to satisfy a request of that size
-        return payloadPtr;
     }
     return payloadPtr;
 }
@@ -117,37 +117,92 @@ size_t calculateSize(size_t size) {
     return blocksize;
 }
 
-void *find_freelist(size_t blocksize) {
-    int index =  blocksize / 64;
-
+void *find_freelist(size_t requestSize) {
+    int index =  requestSize / 64;
+    debug("INDEX: %d", index);
     // First, we start with the first size class from int index
-    while (index != (NUM_FREE_LISTS - 1)) {
+    while (index <= (NUM_FREE_LISTS - 1)) {
 
         sf_block sentinelBlock = sf_free_list_heads[index]; // dummy node connecting first and last
         sf_block *targetBlock = sentinelBlock.body.links.next;
+        debug("index %d ", index);
+        int count = 0;
 
         // Check through that free list for appropriate size
-        while (targetBlock != &sentinelBlock) { // end of free list equal to &sentinelBlock
-
+        while (targetBlock != &sf_free_list_heads[index]) { // end of free list equal to &sentinelBlock
+            count++;
+            debug("count : %d", count);
             // check if you found
-            int amountSize = targetBlock->header & BLOCK_SIZE_MASK; // get size excluding last 2 bits (which check allocation)
-            if (amountSize == blocksize) {
+            int foundSize = targetBlock->header & BLOCK_SIZE_MASK; // get size excluding last 2 bits (which check allocation)
+            if (foundSize == requestSize) {
                 // found the correct EXACT block size
+
+                // Adding the allocated bit
+                targetBlock->header = (targetBlock->header | 1);
 
                 // REMOVE FREE LIST FROM ARRAY
                 sf_block *nextTargetBlock = targetBlock->body.links.next;
                 sf_block *prevTargetBlock = targetBlock->body.links.prev;
                 nextTargetBlock->body.links.prev = targetBlock->body.links.prev; // REMOVE FROM FREE LIST
                 prevTargetBlock->body.links.next = targetBlock->body.links.next;
+                targetBlock->body.links.next = NULL;
+                targetBlock->body.links.prev = NULL;
 
-                void *payloadPtr = targetBlock->body.payload;
+                // Access next block's contents
+                void *targetBlockHeader = targetBlock + 8; // address of header
+                sf_block *nextBlock = targetBlockHeader + foundSize;
+                // void *targetBlockFooter = targetBlock + amountSize; // address of footer
 
+                // 10 LSBs for the next block's header and footer
+                (nextBlock->header) = ( (nextBlock->header) | 2);
+                (nextBlock->prev_footer) = ( (nextBlock->prev_footer) | 2);
+
+                void *payloadPtr = targetBlockHeader + 8;
+                debug("Success1");
                 return payloadPtr;
+
             }
-            else if (amountSize > blocksize) {
-                // 1. split it
-                  // make a new block with that size?
-                // 2. lower part = allocation request, upper part = remainder
+            else if (foundSize > requestSize) {
+
+                // 1. SPLITTING
+
+                // The two pointers in the free block are in a union with the payload, so share same space
+                // (lower part = allocation request, upper part = remainder)
+
+                size_t remainder = (size_t) foundSize - requestSize;
+
+                // Allocated Block
+                sf_block *newAllocatedBlock = targetBlock;
+                newAllocatedBlock->header = (size_t) requestSize | 3; // for allocated (1) and prev_allocated (1)
+
+                // Free Block's Header
+                sf_block *newFreeBlock = (sf_block*) (targetBlock + requestSize); // start of free block (upper)
+                newFreeBlock->header= (size_t) (remainder | 2); // prev_allocated = 1, allocated = 0.
+
+                // Free Block's Footer
+                sf_block *newFreeBlock_nextBlock = (sf_block*) (newFreeBlock + requestSize);
+                newFreeBlock_nextBlock->prev_footer = (size_t) (remainder | 2); // Free Block Footer = Free Block Header
+                // ---------------------------------------------------------------------------
+
+                // LETS FIX THE LINKED LISTS:
+
+                // Blocks before and after the Initial Free Block
+                sf_block *nextBlock = newAllocatedBlock->body.links.next;
+                sf_block *prevBlock = newAllocatedBlock->body.links.prev;
+
+                nextBlock->body.links.prev = newFreeBlock;
+                prevBlock->body.links.next = newFreeBlock;
+                newFreeBlock->body.links.prev = prevBlock;
+                newFreeBlock->body.links.next = nextBlock;
+                newAllocatedBlock->body.links.next = NULL;
+                newAllocatedBlock->body.links.prev = NULL;
+
+                // ---------------------------------------------------------------------------
+
+                void *payloadPtr = newAllocatedBlock->body.payload;
+                debug("Success2");
+                return payloadPtr;
+
             }
             targetBlock = targetBlock->body.links.next; // get next
         } // end of inner while loop
