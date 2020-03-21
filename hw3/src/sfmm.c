@@ -175,35 +175,31 @@ void *find_freelist(size_t requestSize) {
                 // (lower part = allocation request, upper part = free block)
 
                 if (index == 9) isWilderness = 1; // we're using the wilderness block
-
-                size_t remainder = (size_t) foundSize - requestSize;
+                size_t remainder = (size_t) (foundSize - requestSize);
 
                 // Allocated Block
-                sf_block *newAllocatedBlock = targetBlock;
+                void *block_address = targetBlock;
+                sf_block *newAllocatedBlock = (sf_block*) block_address;
+
                 newAllocatedBlock->header = (size_t) requestSize | (1); // for allocated (1)
-
-                // Free Block's Header
-                sf_block *newFreeBlock = (sf_block*) (newAllocatedBlock + requestSize); // start of free block (upper)
-                newFreeBlock->header= (size_t) (remainder | 2); // prev_allocated = 1, allocated = 0.
-
-                // Free Block's Footer
-
-                sf_block *newFreeBlock_nextBlock = (sf_block*) (newFreeBlock + remainder);
-                void *endHeap = sf_mem_end() - 16; // because 8 is the footer
-                sf_block *epilogue = (sf_block *) endHeap;
-
-                if ( isWilderness == 0 ) newFreeBlock_nextBlock->prev_footer = (size_t) (remainder | 2); // Free Block Footer = Free Block Header
-                else epilogue->prev_footer = (size_t) (remainder | 2); // Free Block Footer = Free Block Header
-
-                // ---------------------------------------------------------------------------
-
-                // Remove Free Block from List
 
                 sf_block *nextBlock = newAllocatedBlock->body.links.next;
                 sf_block *prevBlock = newAllocatedBlock->body.links.prev;
 
-                nextBlock->body.links.prev = newFreeBlock->body.links.prev;
-                prevBlock->body.links.next = newFreeBlock->body.links.next;
+                nextBlock->body.links.prev = newAllocatedBlock->body.links.prev;
+                prevBlock->body.links.next = newAllocatedBlock->body.links.next;
+
+                // Free Block's Header
+                sf_block *newFreeBlock = (sf_block*) (block_address + requestSize); // start of free block (upper)
+                newFreeBlock->header= (size_t) (remainder | 2); // prev_allocated = 1, allocated = 0.
+
+                // Free Block's Footer
+                sf_block *newFreeBlock_nextBlock = (sf_block*) (block_address + foundSize);
+                newFreeBlock_nextBlock->prev_footer = (size_t) (remainder | 2);
+
+                // return NULL;
+
+                // ---------------------------------------------------------------------------
 
                 newAllocatedBlock->body.links.next = NULL;
                 newAllocatedBlock->body.links.prev = NULL;
