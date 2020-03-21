@@ -42,7 +42,7 @@ void assert_free_list_size(int index, int size) {
 	bp = bp->body.links.next;
     }
     cr_assert_eq(cnt, size, "Free list %d has wrong number of free blocks (exp=%d, found=%d)",
-		 size, cnt);
+		 index, size, cnt);
 }
 
 Test(sf_memsuite_student, malloc_an_int, .init = sf_mem_init, .fini = sf_mem_fini) {
