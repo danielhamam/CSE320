@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <errno.h>
 #include "debug.h"
 #include "sfmm.h"
 
@@ -15,6 +16,7 @@ size_t calculateSize(size_t size);
 void *find_freelist(size_t blocksize);
 size_t insertFreeBlock(int remainder);
 int findIndex(int size);
+void *createFreeBlock(size_t request);
 
 int first_allocation = 0;
 void *sf_malloc(size_t size) {
@@ -59,9 +61,15 @@ void *sf_memalign(size_t size, size_t align) {
 // -----------------------------------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------------
 
 //                                                  HELPER FUNCTIONS
 
+// -----------------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------------------------------
@@ -82,7 +90,7 @@ void initialize_heap() {
 
     sf_block *wilderness = (sf_block *) startHeap;
     int space = (sf_mem_end() - 16) - startHeap;
-    debug("SPACE: %d", space);
+    // debug("SPACE: %d", space);
     wilderness->prev_footer = (size_t) 67;
     wilderness->header = (size_t) space;
 
@@ -116,8 +124,6 @@ size_t calculateSize(size_t size) {
     else {
         int adjustedSize = sizeof(sf_header) + ( (int) size);
         int blocksize = (( adjustedSize + 32) / 64) * 64;
-        debug("ADJUSTEDSIZE: %d", adjustedSize);
-        debug("BLOCKSIZE: %d", blocksize);
         return blocksize;
     }
 }
@@ -125,21 +131,15 @@ size_t calculateSize(size_t size) {
 void *find_freelist(size_t requestSize) {
     int index =  requestSize / 64;
     int isWilderness = 0;
-    debug("REQUEST SIZE: %d", (int) requestSize);
-    debug("INDEX: %d", index);
     // First, we start with the first size class from int index
 
     while (index <= (NUM_FREE_LISTS - 1)) {
 
         sf_block sentinelBlock = sf_free_list_heads[index]; // dummy node connecting first and last
         sf_block *targetBlock = sentinelBlock.body.links.next;
-        debug("index %d ", index);
-        int count = 0;
 
         // Check through that free list for appropriate size
         while (targetBlock != &sf_free_list_heads[index]) { // end of free list equal to &sentinelBlock
-            count++;
-            debug("count : %d", count);
             // check if you found
             int foundSize = targetBlock->header & BLOCK_SIZE_MASK; // get size excluding last 2 bits (which check allocation)
 
@@ -163,7 +163,6 @@ void *find_freelist(size_t requestSize) {
                 nextBlock->prev_footer = ( (nextBlock->prev_footer) | 2);
 
                 void *payloadPtr = allocatedBlock->body.payload;
-                debug("Success1");
                 return payloadPtr;
 
             }
@@ -208,7 +207,6 @@ void *find_freelist(size_t requestSize) {
                 newAllocatedBlock->body.links.next = NULL;
                 newAllocatedBlock->body.links.prev = NULL;
 
-
                 // LETS FIX THE LINKED LISTS:
 
                 if (isWilderness == 0) {
@@ -229,7 +227,6 @@ void *find_freelist(size_t requestSize) {
                 // ---------------------------------------------------------------------------
 
                 char *payloadPtr = newAllocatedBlock->body.payload;
-                debug("Success2");
                 return payloadPtr;
 
             }
@@ -240,6 +237,164 @@ void *find_freelist(size_t requestSize) {
 
     // if you make it here, then no block was big enough!
     // must use sf_mem_grow to request more memory (if not possible, sf_errno = ENOmem, and return NULL)
+
+    void *newBlock = createFreeBlock(requestSize);
+    if (newBlock == NULL) return NULL;
+    else {
+        sf_block *targetBlock = (sf_block *) newBlock;
+        return targetBlock->body.payload;
+    }
+
+}
+
+// Function responsible to have another free block. According to the document, after each call to sf_mem_grow, I should
+// coalesce the page with the wilderness block (if any) preceding it. This allows me to build blocks more than one page. This
+// new wilderness block is placed at the beginning of the last freelist
+
+void *createFreeBlock(size_t requestSize) {
+
+    void *wilderness;
+    size_t newFreeBlock_Size;
+    size_t SavedPrevFooter;
+
+    void *endHeap = sf_mem_end() - 16; // Starts at footer of WB
+    sf_block *epilogue = (sf_block *) endHeap;
+
+    int initialPrevAlloc = epilogue->prev_footer & PREV_BLOCK_ALLOCATED;
+
+    if ( (epilogue->prev_footer & PREV_BLOCK_ALLOCATED) == 1 ) {
+        // Previous Block is Allocated (WB has 0 FREE SPACE)
+        newFreeBlock_Size = 0;
+        wilderness = sf_mem_end() - 8; // start address of wilderness block
+    }
+    else {
+        // Previous Block is not Allocated (FREE BLOCK)
+
+        // Let's find the start address header
+        newFreeBlock_Size = epilogue->prev_footer & BLOCK_SIZE_MASK; // prev footer of epilogue holds prev block's size (held initally WB size)
+
+        // Let's access previous block (WB)
+        void *FirstWilderness_Address = endHeap - newFreeBlock_Size;
+        sf_block * initial_Wilderness = (sf_block *) FirstWilderness_Address;
+        SavedPrevFooter = initial_Wilderness->prev_footer;
+        // SAVED THE PREV_FOOTER. PUT THIS BACK INTO NEW WB
+
+        wilderness = (sf_mem_end() - 16) - newFreeBlock_Size; // start address of FIRST wildernes block
+
+        // Reset the Epilogue
+        epilogue->prev_footer = 0;
+        epilogue->header = 0;
+
+    }
+
+    while (requestSize > newFreeBlock_Size) {
+
+        if (sf_mem_grow() != NULL) newFreeBlock_Size += 4096;
+        else {
+
+            // Can not access more sf_mem_grow()
+            sf_errno = ENOMEM;
+            return NULL;
+        }
+    } // end of while loop
+
+    // If we make it here, we assume sf_mem_grow was able to allocate memory for all requested space
+        // "Coalesce newly allocated page with WB preceding it"
+        // "Insert new WB at beginning of last free list"
+        // "Do not coalesce with prologue, epilogue, or past the beginning or end of heap"
+
+    sf_block *wildernessBlock = (sf_block *) wilderness;
+
+    debug("INITIAL WILDERNESS BLOCK ---> %d ", (int) wildernessBlock->header);
+
+    size_t new_WildernessSize = (size_t) newFreeBlock_Size; // new size of wilderness block
+
+    // Insert the Wilderness Block into the last list of FREE LIST ARRAY
+    // sf_free_list_heads[NUM_FREE_LISTS - 1].body.links.next = (wildernessBlock);
+    // sf_free_list_heads[NUM_FREE_LISTS - 1].body.links.prev = (wildernessBlock);
+    // wildernessBlock->body.links.next = &sf_free_list_heads[NUM_FREE_LISTS - 1];
+    // wildernessBlock->body.links.prev = &sf_free_list_heads[NUM_FREE_LISTS - 1];
+
+    // Edit wilderness block's header (NEW HEADER)
+    wildernessBlock->prev_footer = SavedPrevFooter; // for the prologue block
+    wildernessBlock->header = (size_t) new_WildernessSize | initialPrevAlloc;
+
+    // Edit wilderness block's footer (NEW FOOTER) --> THIS IS THE EPILOGUE
+    void *newEpilogue_address = wilderness + new_WildernessSize;
+    sf_block *newEpilogue = (sf_block *) newEpilogue_address;
+    newEpilogue->prev_footer = (size_t) new_WildernessSize | initialPrevAlloc;
+    newEpilogue->header = (size_t) 1;
+    // newEpilogue address is correct (points to epilogue)
+
+    // ALLOCATION STEP:
+    // ---------------------------------------------------------------------------------
+    // Now, ALLOCATE the block with the amount requested. Should split WB if needed
+    // ---------------------------------------------------------------------------------
+
+    if (new_WildernessSize == requestSize) {
+        // dont split the wilderness block
+
+        // Adding the allocated bit
+        wildernessBlock->header = (wildernessBlock->header | 1);
+
+        // REMOVE FREE LIST FROM ARRAY
+        sf_block *nextFreeBlock = wildernessBlock->body.links.next;
+        sf_block *prevFreeBlock = wildernessBlock->body.links.prev;
+        nextFreeBlock->body.links.prev = wildernessBlock->body.links.prev; // REMOVE FROM FREE LIST
+        prevFreeBlock->body.links.next = wildernessBlock->body.links.next;
+        wildernessBlock->body.links.next = NULL;
+        wildernessBlock->body.links.prev = NULL;
+
+        // Access next block's contents
+        sf_block *nextBlock = wildernessBlock + new_WildernessSize;
+        nextBlock->prev_footer = (nextBlock->prev_footer) | 2; // this would be the epilogue
+
+        void *payloadPtr = wildernessBlock->body.payload;
+        return payloadPtr;
+    }
+    else if (new_WildernessSize > requestSize) {
+
+        debug("GREATER THAN");
+
+        // split the wilderness block
+        size_t remainder = (size_t) (new_WildernessSize - requestSize);
+
+        // Allocated Block
+        sf_block *newAllocatedBlock = (sf_block*) wilderness; // wilderness is the start of the WB block
+
+        // Create allocated block header, check if previous block is allocated
+        // In the beginning --> int initialPrevAlloc = epilogue->prev_footer & PREV_BLOCK_ALLOCATED;
+
+        if (initialPrevAlloc == 0) newAllocatedBlock->header = (size_t) requestSize | (1); // for allocated (1)
+        else newAllocatedBlock->header = (size_t) requestSize | (3); // for prev_allocated (1) and allocated(1)
+
+        sf_block *nextBlock = newAllocatedBlock->body.links.next;
+        sf_block *prevBlock = newAllocatedBlock->body.links.prev;
+
+        nextBlock->body.links.prev = newAllocatedBlock->body.links.prev;
+        prevBlock->body.links.next = newAllocatedBlock->body.links.next;
+
+        // Free Block's Header
+        sf_block *newFreeBlock = (sf_block*) (wilderness + requestSize); // start of free block (upper)
+        newFreeBlock->header = (size_t) (remainder | 2); // prev_allocated = 1, allocated = 0.
+
+        // Free Block's Footer
+        sf_block *newFreeBlock_nextBlock = (sf_block*) (wilderness + new_WildernessSize);
+        newFreeBlock_nextBlock->prev_footer = (size_t) (remainder | 2);
+
+        newAllocatedBlock->body.links.next = NULL;
+        newAllocatedBlock->body.links.prev = NULL;
+
+        // It's the wilderness block (if you split WB, free block becomes new wilderness block. ALWAYS LAST LIST)
+
+        nextBlock->body.links.prev = newFreeBlock;
+        prevBlock->body.links.next = newFreeBlock;
+        newFreeBlock->body.links.prev = prevBlock;
+        newFreeBlock->body.links.next = nextBlock;
+
+        return wilderness;
+
+    }
     return NULL;
 }
 
