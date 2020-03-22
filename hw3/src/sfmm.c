@@ -181,7 +181,11 @@ void *find_freelist(size_t requestSize) {
                 void *block_address = targetBlock;
                 sf_block *newAllocatedBlock = (sf_block*) block_address;
 
-                newAllocatedBlock->header = (size_t) requestSize | (1); // for allocated (1)
+                // Create allocated block header, check if previous block is allocated
+                int isAllocated_prev = (targetBlock->prev_footer & PREV_BLOCK_ALLOCATED);
+
+                if (isAllocated_prev == 0) newAllocatedBlock->header = (size_t) requestSize | (1); // for allocated (1)
+                else newAllocatedBlock->header = (size_t) requestSize | (3); // for allocated (1)
 
                 sf_block *nextBlock = newAllocatedBlock->body.links.next;
                 sf_block *prevBlock = newAllocatedBlock->body.links.prev;
