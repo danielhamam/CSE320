@@ -5,7 +5,7 @@ int main(int argc, char const *argv[]) {
 
     // sf_mem_init();
 
-    double* ptr = sf_malloc(8);
+    double* ptr = sf_malloc(12288);
     // ---------------------
     sf_show_heap();
     return 0;
