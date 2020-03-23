@@ -17,6 +17,8 @@ void *find_freelist(size_t blocksize);
 size_t insertFreeBlock(int remainder);
 int findIndex(int size);
 void *createFreeBlock(size_t request);
+int checkPointer(void *pointer);
+void *coalesce(void *pointer);
 
 int first_allocation = 0;
 void *sf_malloc(size_t size) {
@@ -47,12 +49,13 @@ void *sf_malloc(size_t size) {
 
 void sf_free(void *pp) {
 
-    // find address of the block
-    sf_header *blockHead = pp - sizeof(sf_header);
-    int allocated = (*blockHead) & THIS_BLOCK_ALLOCATED;
-    if (!allocated || pp == NULL) abort(); // "if ptr is invalid, call abort()"
+    // First, Check If PP (pointer) Is Valid (aka, if it's allocated)
+    int ptrNum = checkPointer(pp);
+    if (ptrNum == -1) abort();
+    // Else, we can continue. The pointer is valid.
 
-    (*blockHead) = (*blockHead) & 0xfffffffe; // clear allocated bit --> free bit
+    void *ptr_Start = pp - 16; // goes to prev_footer
+    coalesce(ptr_Start);
 }
 
 void *sf_realloc(void *pp, size_t rsize) {
@@ -433,4 +436,68 @@ int findIndex(int size) {
     else return 8;
     // 9  holds the wilderness block
 
+}
+
+// -1 = failure, success = 0
+int checkPointer(void *pointer) {
+
+    // pointer is a pointer to the payload of the malloc
+
+    // Check if NULL
+    if (pointer == NULL) return -1;
+
+    // Check if NOT ALLOCATED
+    sf_block *ptrBlock = (sf_block *) pointer - 16; // Now points to the start of the block (with prev_footer)
+    int allocated = (ptrBlock->header & THIS_BLOCK_ALLOCATED);
+    if (allocated == 0) return -1; // "if ptr is invalid, call abort()"
+
+    // Check if block size is aligned with 64 boundary
+    size_t block_size = ptrBlock->header & BLOCK_SIZE_MASK;
+    if (block_size % 64 != 0) return -1;
+
+    // Check if "the header of the block = before end of the prologue"
+    // Check if "the footer of the block = after beginning of epilogue"
+    if ( (pointer - 8) < sf_mem_start() + 64 || (pointer + block_size) > sf_mem_end() - 8) return -1;
+
+    // Check if prev_alloc is 0 but alloc of prev block is 1
+    int markedPrevAllocated = ptrBlock->header & PREV_BLOCK_ALLOCATED;
+    int realAllocated = ptrBlock->prev_footer & THIS_BLOCK_ALLOCATED;
+    if (markedPrevAllocated == 0 && realAllocated == 1) return -1;
+
+    return 0;
+
+}
+
+void *coalesce(void *pointer) {
+
+    sf_block *ptrBlock = (sf_block *) pointer;
+    size_t ptrBlock_size = (size_t) ptrBlock->header & BLOCK_SIZE_MASK;
+
+    // Boolean markers for allocation
+    int nextBlockAllocated;
+    int prevBlockAllocated;
+
+    // NEXT BLOCK (AFTER POINTER BLOCK)
+    void *ptrBlock_footer = pointer + ptrBlock_size;
+    sf_block *nextBlock = (sf_block*) ptrBlock_footer;
+    if ( (nextBlock->header & THIS_BLOCK_ALLOCATED) == 1) nextBlockAllocated = 1;
+
+    // PREVIOUS BLOCK (BEFORE POINTER BLOCK)
+    size_t prevBlock_size = ptrBlock->prev_footer & BLOCK_SIZE_MASK;
+    sf_block *prevBlock = (sf_block*) pointer - prevBlock_size; // goes to prev_footer of the previous block
+    if ( (prevBlock->header & THIS_BLOCK_ALLOCATED) == 1) prevBlockAllocated = 1;
+
+    // Combine:
+
+    // If nextBlock is FREE but prevBlock is ALLOCATED
+    if ( (nextBlockAllocated != 1) && (prevBlockAllocated == 1) ) {
+
+    }
+
+    // If nextBlock is ALLOCATED but prevBlock is FREE
+    if ( (nextBlockAllocated == 1) && (prevBlockAllocated != 1) ) {
+
+    }
+
+    return NULL;
 }
