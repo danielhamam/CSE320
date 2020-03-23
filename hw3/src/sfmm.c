@@ -51,15 +51,11 @@ void sf_free(void *pp) {
 
     // First, Check If PP (pointer) Is Valid (aka, if it's allocated)
     int ptrNum = checkPointer(pp);
-    if (ptrNum == -1) {
-        return;
-        abort();
-    }
+    if (ptrNum == -1) abort();
     // Else, we can continue. The pointer is valid.
 
     void *ptr_Start = pp - 16; // goes to prev_footer
     coalesce(ptr_Start);
-    return;
 }
 
 void *sf_realloc(void *pp, size_t rsize) {
@@ -163,8 +159,12 @@ void *find_freelist(size_t requestSize) {
                 // found the correct EXACT block size
 
                 // Adding the allocated bit
-                sf_block *allocatedBlock = targetBlock;
-                allocatedBlock->header = (allocatedBlock->header | 1);
+                sf_block *allocatedBlock = (sf_block *) block_address;
+
+                // check if previous block is allocated
+                int isAllocated_prev = (targetBlock->header & PREV_BLOCK_ALLOCATED);
+                if (isAllocated_prev == 0) allocatedBlock->header = (size_t) requestSize | (1); // for allocated (1)
+                else allocatedBlock->header = (size_t) requestSize | (3); // for allocated (1)
 
                 // REMOVE FREE LIST FROM ARRAY
                 sf_block *nextFreeBlock = allocatedBlock->body.links.next;
@@ -174,11 +174,8 @@ void *find_freelist(size_t requestSize) {
                 allocatedBlock->body.links.next = NULL;
                 allocatedBlock->body.links.prev = NULL;
 
-                // Access next block's contents
-                sf_block *nextBlock = allocatedBlock + foundSize;
-                nextBlock->prev_footer = ( (nextBlock->prev_footer) | 2);
+                // allocated Blocks don't have footers
 
-                // void *payloadPtr = allocatedBlock->body.payload;
                 return block_address;
 
             }
@@ -195,8 +192,7 @@ void *find_freelist(size_t requestSize) {
                 sf_block *newAllocatedBlock = (sf_block*) block_address;
 
                 // Create allocated block header, check if previous block is allocated
-                int isAllocated_prev = (targetBlock->prev_footer & PREV_BLOCK_ALLOCATED);
-
+                int isAllocated_prev = (targetBlock->header & PREV_BLOCK_ALLOCATED);
                 if (isAllocated_prev == 0) newAllocatedBlock->header = (size_t) requestSize | (1); // for allocated (1)
                 else newAllocatedBlock->header = (size_t) requestSize | (3); // for allocated (1)
 
@@ -559,6 +555,20 @@ void *coalesce(void *pointer) {
 
     }
 
+    // Both nextBlock and prevBLOCK are ALLOCATED
+    else if ( (nextBlockAllocated == 1) && (prevBlockAllocated == 1) ) {
+        // No coalescing, just place into heap
+
+        // Change header and footer to alloc = 1.
+        ptrBlock->header = (ptrBlock->header - 1); // taking out ALLOCATED bit.
+        nextBlock->prev_footer = (ptrBlock->header - 1); // footer equivalent to header
+
+        // NewBlock declarations
+        newBlock_address = pointer;
+        newBlock = (sf_block *) pointer;
+
+    }
+
     else {
 
         // Both prevBlock and nextBlock are FREE! (COALESCE BOTH)
@@ -614,7 +624,7 @@ void *coalesce(void *pointer) {
 
     // Check if it's WILDERNESS BLOCK
     void *newEpilogue_address = sf_mem_end() - 8;
-    if ( (newBlock_address + newBlock_size) == newEpilogue_address) listIndex = 9; // IT IS THE WILDERNESS BLOCK
+    if ( (newBlock_address + newBlock_size + 8) == newEpilogue_address) listIndex = 9; // IT IS THE WILDERNESS BLOCK
     else listIndex = findIndex(newBlock_size); // IT IS NOT THE WILDERNESS BLOCK
 
     // Add it to the appropriate linked list (AT BEGINNING)
