@@ -51,11 +51,15 @@ void sf_free(void *pp) {
 
     // First, Check If PP (pointer) Is Valid (aka, if it's allocated)
     int ptrNum = checkPointer(pp);
-    if (ptrNum == -1) abort();
+    if (ptrNum == -1) {
+        return;
+        abort();
+    }
     // Else, we can continue. The pointer is valid.
 
     void *ptr_Start = pp - 16; // goes to prev_footer
     coalesce(ptr_Start);
+    return;
 }
 
 void *sf_realloc(void *pp, size_t rsize) {
@@ -447,7 +451,8 @@ int checkPointer(void *pointer) {
     if (pointer == NULL) return -1;
 
     // Check if NOT ALLOCATED
-    sf_block *ptrBlock = (sf_block *) pointer - 16; // Now points to the start of the block (with prev_footer)
+    void *ptr_address = pointer - 16;
+    sf_block *ptrBlock = (sf_block *) ptr_address; // Now points to the start of the block (with prev_footer)
     int allocated = (ptrBlock->header & THIS_BLOCK_ALLOCATED);
     if (allocated == 0) return -1; // "if ptr is invalid, call abort()"
 
@@ -484,20 +489,139 @@ void *coalesce(void *pointer) {
 
     // PREVIOUS BLOCK (BEFORE POINTER BLOCK)
     size_t prevBlock_size = ptrBlock->prev_footer & BLOCK_SIZE_MASK;
-    sf_block *prevBlock = (sf_block*) pointer - prevBlock_size; // goes to prev_footer of the previous block
+    void *prevBlock_address = pointer - prevBlock_size;
+    sf_block *prevBlock = (sf_block*) prevBlock_address; // goes to prev_footer of the previous block
     if ( (prevBlock->header & THIS_BLOCK_ALLOCATED) == 1) prevBlockAllocated = 1;
+
+    void *newBlock_address;
+    sf_block *newBlock;
 
     // Combine:
 
     // If nextBlock is FREE but prevBlock is ALLOCATED
     if ( (nextBlockAllocated != 1) && (prevBlockAllocated == 1) ) {
 
+        // Remove Next Block's LINKS:
+        sf_block *nextFreeBlock_next = nextBlock->body.links.next;
+        sf_block *prevFreeBlock_next = nextBlock->body.links.prev;
+        nextFreeBlock_next->body.links.prev = nextBlock->body.links.prev; // REMOVE FROM FREE LIST
+        prevFreeBlock_next->body.links.next = nextBlock->body.links.next;
+        nextBlock->body.links.next = NULL;
+        nextBlock->body.links.prev = NULL;
+
+        // Add nextBlock size to Block size
+        size_t nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
+        size_t overallSize = ptrBlock_size + nextBlock_size;
+
+        // ptrBlock's header is header, combined size = block size, nextBlock's footer becomes footer
+
+        // Fix size of header
+        ptrBlock->header = (overallSize | 2); // 10 because previously is allocated
+
+        void *nextBlock_afterAddr = ptrBlock_footer + nextBlock_size; // block after nextBlock (address)
+        sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr; // block after newBlock (block
+        nextBlock_after->prev_footer = (overallSize | 2); // Footer same as header
+
+        // newBlock declarations
+        newBlock_address = pointer;
+        newBlock = (sf_block *) pointer;
+
     }
 
     // If nextBlock is ALLOCATED but prevBlock is FREE
-    if ( (nextBlockAllocated == 1) && (prevBlockAllocated != 1) ) {
+    else if ( (nextBlockAllocated == 1) && (prevBlockAllocated != 1) ) {
+
+        // Remove Prev Block LINKS:
+        sf_block *nextFreeBlock = prevBlock->body.links.next;
+        sf_block *prevFreeBlock = prevBlock->body.links.prev;
+        nextFreeBlock->body.links.prev = prevBlock->body.links.prev; // REMOVE FROM FREE LIST
+        prevFreeBlock->body.links.next = prevBlock->body.links.next;
+        prevBlock->body.links.next = NULL;
+        prevBlock->body.links.prev = NULL;
+
+        // Add prevBlock size to Block size
+        size_t prevBlock_size = prevBlock->header & BLOCK_SIZE_MASK;
+        size_t overallSize = ptrBlock_size + prevBlock_size;
+
+        // Start from prevBlock header, end at ptrBlock footer
+
+        // Fix size of header
+        int prevBlock_prevAllocated = prevBlock->prev_footer & THIS_BLOCK_ALLOCATED; // If block before prevBlock is allocated
+        prevBlock->header = (overallSize | prevBlock_prevAllocated);
+
+        // Fix size of ptrBlock's footer
+        nextBlock->prev_footer = (overallSize | prevBlock_prevAllocated);
+
+        // newBlock declarations
+
+        newBlock_address = prevBlock_address;
+        newBlock = (sf_block *) prevBlock_address;
 
     }
 
-    return NULL;
+    else {
+
+        // Both prevBlock and nextBlock are FREE! (COALESCE BOTH)
+
+        size_t prevBlock_size = prevBlock->header & BLOCK_SIZE_MASK;
+        size_t nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
+        size_t overallSize = prevBlock_size + ptrBlock_size + nextBlock_size;
+
+        // Remove from free list arrays:
+
+        // Remove Prev Block LINKS:
+        sf_block *nextFreeBlock = prevBlock->body.links.next;
+        sf_block *prevFreeBlock = prevBlock->body.links.prev;
+        nextFreeBlock->body.links.prev = prevBlock->body.links.prev; // REMOVE FROM FREE LIST
+        prevFreeBlock->body.links.next = prevBlock->body.links.next;
+        prevBlock->body.links.next = NULL;
+        prevBlock->body.links.prev = NULL;
+
+        // Remove Next Block LINKS:
+        sf_block *nextFreeBlock_next = nextBlock->body.links.next;
+        sf_block *prevFreeBlock_next = nextBlock->body.links.prev;
+        nextFreeBlock_next->body.links.prev = nextBlock->body.links.prev; // REMOVE FROM FREE LIST
+        prevFreeBlock_next->body.links.next = nextBlock->body.links.next;
+        nextBlock->body.links.next = NULL;
+        nextBlock->body.links.prev = NULL;
+
+        // Start at prevBlock header, end at nextBlock footer
+
+        // Fix size of header
+        int prevBlock_prevAllocated = prevBlock->prev_footer & THIS_BLOCK_ALLOCATED; // If block before prevBlock is allocated
+        prevBlock->header = (overallSize | prevBlock_prevAllocated);
+
+        // Fix size of nextBlock's footer
+        void *nextBlock_afterAddr = ptrBlock_footer + nextBlock_size; // block after nextBlock (address)
+        sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr; // block after newBlock (block
+        nextBlock_after->prev_footer = (overallSize | prevBlock_prevAllocated); // Footer same as header
+
+        // newBlock declarations
+
+        newBlock_address = prevBlock_address;
+        newBlock = (sf_block *) prevBlock_address;
+
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------
+    // FROM HERE: Determine size class, place at beginning of free list for that size class
+
+    size_t newBlock_size = newBlock->header & BLOCK_SIZE_MASK;
+    int listIndex;
+
+    // Check if it's WILDERNESS BLOCK
+    void *newEpilogue_address = sf_mem_end() - 8;
+    if ( (newBlock_address + newBlock_size) == newEpilogue_address) listIndex = 9; // IT IS THE WILDERNESS BLOCK
+    else listIndex = findIndex(newBlock_size); // IT IS NOT THE WILDERNESS BLOCK
+
+    // Add it to the appropriate linked list (AT BEGINNING)
+    newBlock->body.links.next = sf_free_list_heads[listIndex].body.links.next; // newBlock's next is former 1st place
+    (sf_free_list_heads[listIndex].body.links.next)->body.links.prev = newBlock; // Former 1st place's prev is newBlock
+    newBlock->body.links.prev = &sf_free_list_heads[listIndex]; // newBlock's prev is sentinel node
+    sf_free_list_heads[listIndex].body.links.next = newBlock; // sentintel node's next is newBlock
+
+    return newBlock;
 }
