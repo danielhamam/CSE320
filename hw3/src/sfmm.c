@@ -561,7 +561,13 @@ void *coalesce(void *pointer) {
 
         // Change header and footer to alloc = 1.
         ptrBlock->header = (ptrBlock->header - 1); // taking out ALLOCATED bit.
-        nextBlock->prev_footer = (ptrBlock->header - 1); // footer equivalent to header
+
+        debug("PREV FOOTER 1 ----> %d ", (int) (nextBlock->prev_footer) );
+
+        nextBlock->prev_footer = (ptrBlock->header); // footer equivalent to header
+
+        debug("PREV FOOTER 2 ----> %d ", (int) (nextBlock->prev_footer) );
+
 
         // NewBlock declarations
         newBlock_address = pointer;
