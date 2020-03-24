@@ -469,9 +469,9 @@ int checkPointer(void *pointer) {
     size_t block_size = ptrBlock->header & BLOCK_SIZE_MASK;
     if (block_size % 64 != 0) return -1;
 
-    // Check if "the header of the block = before end of the prologue"
+    // Check if "the header of the block = before enbd of the prologue"
     // Check if "the footer of the block = after beginning of epilogue"
-    if ( (pointer - 8) < sf_mem_start() + 64 || (pointer + block_size) > sf_mem_end() - 8) return -1;
+    if ( (pointer + 8) < sf_mem_start() + 64 + 56|| (pointer - 8 + block_size) > sf_mem_end() - 8) return -1;
 
     // Check if prev_alloc is 0 but alloc of prev block is 1
     int markedPrevAllocated = ptrBlock->header & PREV_BLOCK_ALLOCATED;
@@ -593,19 +593,14 @@ void *coalesce(void *pointer) {
     else if ( (nextBlockAllocated == 1) && (prevBlockAllocated == 1) ) {
         // No coalescing, just place into heap
 
-        // debug("TEST3");
-
         // Change header and footer to alloc = 1.
-        ptrBlock->header = (ptrBlock->header - 1); // taking out ALLOCATED bit.
-        nextBlock->prev_footer = (ptrBlock->header); // footer equivalent to header
+
+        ptrBlock->header = ptrBlock->header - 1; // taking out ALLOCATED bit.
+        nextBlock->prev_footer = ptrBlock->header; // footer equivalent to header
 
         // Next block should have pal = 0. (change it's header and footer)
         // The next block will always be an allocated block, so no footer
         nextBlock->header = (nextBlock->header) - 2;
-        // int nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
-        // void *nextBlock_afterAddr = ptrBlock_footer + nextBlock_size; // block after nextBlock (address)
-        // sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr; // block after newBlock (block
-        // nextBlock_after->prev_footer = (nextBlock->header); // Footer same as header
 
         // NewBlock declarations
         newBlock_address = pointer;
@@ -660,13 +655,6 @@ void *coalesce(void *pointer) {
         newBlock = (sf_block *) prevBlock_address;
 
         // Change PAL of after next block (both HEADER AND FOOTER)
-
-        // void *afterNewBlock_addr = ptrBlock_footer + nextBlock_size;
-        // sf_block *afterNewBlock = (sf_block *) afterNewBlock_addr;
-        // afterNewBlock->header -= 2;
-        // void *afterNewBlock_footerAddr = afterNewBlock_addr +  (afterNewBlock->header & BLOCK_SIZE_MASK);
-        // sf_block *after_afterNewBlock = (sf_block *) afterNewBlock_footerAddr;
-        // after_afterNewBlock->prev_footer = (afterNewBlock->header);
 
 
     }
