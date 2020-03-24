@@ -59,6 +59,88 @@ void sf_free(void *pp) {
 }
 
 void *sf_realloc(void *pp, size_t rsize) {
+
+    int ptrNum = checkPointer(pp);
+    if (ptrNum == -1) abort();
+    // Else, we can continue. The pointer is valid.
+
+    void *ptr_Start = pp - 16;
+    sf_block *ptrBlock = (sf_block *) ptr_Start;
+
+    // if pointer is valid, but size is 0.
+    if ((ptrBlock->header & BLOCK_SIZE_MASK) == 0) {
+        sf_free(pp);
+        return NULL;
+    }
+
+    if (rsize == (ptrBlock->header & BLOCK_SIZE_MASK)) return pp;
+    else if (rsize > (ptrBlock->header & BLOCK_SIZE_MASK)) {
+
+        void *newPP = sf_malloc(rsize);
+
+        // If sf_malloc returns null, return NULL:
+        if (newPP == NULL) return NULL;
+
+        // Copies contents of pp into newPP (second into first)
+        memcpy(newPP, pp, (ptrBlock->header & BLOCK_SIZE_MASK));
+
+        // Calling free on block given by the client
+        sf_free(pp);
+
+        // Return block given by sf_malloc
+        return newPP;
+    }
+
+    else {
+        // rsize is smaller, so either split or update with smaller header (if splinter)
+        size_t adjustedSize = calculateSize(rsize);
+        size_t ptrBlock_size = ptrBlock->header & BLOCK_SIZE_MASK;
+
+        if (adjustedSize == ptrBlock_size) {
+            // DO NOT SPLIT
+        }
+        else {
+            // WE MUST SPLIT (rsize is smaller, we have to split the ptrBlock)
+            // two blocks --> one free with remainder, one with allocated r size
+            size_t remainder = ptrBlock_size - adjustedSize;
+
+            // Change ALLOCATED header's contents
+            int initialPrevAlloc = ptrBlock->header & PREV_BLOCK_ALLOCATED;
+            ptrBlock->header = (size_t) (adjustedSize | 1 | initialPrevAlloc); // Doesn't have a footer because allocated
+
+            // Access Free block
+            void *freeBlockAddr = ptr_Start + adjustedSize;
+            sf_block *freeBlock = (sf_block *) freeBlockAddr;
+
+            // Change free block's header and footer
+            freeBlock->header = (remainder | 2); // 10 because previous is allocated
+            void *freeBlock_footerAddr = freeBlockAddr + remainder; // remainder is size of block
+            sf_block *afterFreeBlock = (sf_block *) freeBlock_footerAddr;
+            afterFreeBlock->prev_footer = (remainder | 2);
+
+            // Take out prev allocated of next block (FOR ITS HEADER AND FOOTER)
+            afterFreeBlock->header = (afterFreeBlock->header) - 2;
+            void *footer_afterFreeBlockAddr = freeBlock_footerAddr + (int) (afterFreeBlock->header & BLOCK_SIZE_MASK);
+            sf_block *footer_afterFreeBlock = (sf_block *) footer_afterFreeBlockAddr;
+            footer_afterFreeBlock->prev_footer = (afterFreeBlock->header);
+
+            // Remove links from allocated block (has no links, just precaution)
+            ptrBlock->body.links.prev = NULL;
+            ptrBlock->body.links.next = NULL;
+
+            // Links will be added when coalescing
+
+            // Coalesce the free block created
+            coalesce(freeBlockAddr);
+
+            // Return a pointer to payload of smaller block
+            return ptrBlock->body.payload;
+
+        }
+
+
+    }
+
     return NULL;
 }
 
@@ -503,7 +585,8 @@ void *coalesce(void *pointer) {
     size_t prevBlock_size = ptrBlock->prev_footer & BLOCK_SIZE_MASK;
     void *prevBlock_address = pointer - prevBlock_size;
     sf_block *prevBlock = (sf_block*) prevBlock_address; // goes to prev_footer of the previous block
-    if ( (prevBlock->header & THIS_BLOCK_ALLOCATED) == 1) prevBlockAllocated = 1;
+    // if ( (prevBlock->header & THIS_BLOCK_ALLOCATED) == 1) prevBlockAllocated = 1;
+    if ( (ptrBlock->header & PREV_BLOCK_ALLOCATED) == 2) prevBlockAllocated = 1;
 
     void *newBlock_address;
     sf_block *newBlock;
@@ -525,7 +608,7 @@ void *coalesce(void *pointer) {
         nextBlock->body.links.next = NULL;
         nextBlock->body.links.prev = NULL;
 
-        // debug("TEST1");
+        debug("TEST1");
 
         // Add nextBlock size to Block size
         size_t nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
@@ -559,7 +642,7 @@ void *coalesce(void *pointer) {
         prevBlock->body.links.next = NULL;
         prevBlock->body.links.prev = NULL;
 
-        // debug("TEST2");
+        debug("TEST2");
 
         // Add prevBlock size to Block size
         size_t prevBlock_size = prevBlock->header & BLOCK_SIZE_MASK;
@@ -612,7 +695,7 @@ void *coalesce(void *pointer) {
 
         // Both prevBlock and nextBlock are FREE! (COALESCE BOTH)
 
-                // debug("TEST4");
+                debug("TEST4");
 
         size_t prevBlock_size = prevBlock->header & BLOCK_SIZE_MASK;
         size_t nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
