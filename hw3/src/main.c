@@ -4,8 +4,8 @@
 int main(int argc, char const *argv[]) {
 
     // sf_mem_init();
-    void *x = sf_malloc(sizeof(double) * 8);
-    sf_realloc(x, sizeof(int));
+    void *x = sf_malloc(sizeof(int) * 20);
+    sf_realloc(x, sizeof(int) * 16);
 
     sf_show_heap();
     sf_mem_fini(); // call at end of program to avoid valgrind errors

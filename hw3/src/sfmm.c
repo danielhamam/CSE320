@@ -98,6 +98,9 @@ void *sf_realloc(void *pp, size_t rsize) {
 
         if (adjustedSize == ptrBlock_size) {
             // DO NOT SPLIT
+            debug("Dont split");
+            return pp;
+
         }
         else {
             // WE MUST SPLIT (rsize is smaller, we have to split the ptrBlock)
@@ -181,7 +184,7 @@ void initialize_heap() {
     sf_block *wilderness = (sf_block *) startHeap;
     int space = (sf_mem_end() - 16) - startHeap;
     // debug("SPACE: %d", space);
-    wilderness->prev_footer = (size_t) 67;
+    // wilderness->prev_footer = (size_t) 67; I took this out because allocated blocks dont have a footer!
     wilderness->header = (size_t) space | 2; // prev_alloc is 1 because of prologue
 
     sf_free_list_heads[NUM_FREE_LISTS - 1].body.links.next = (wilderness);
