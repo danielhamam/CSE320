@@ -126,18 +126,20 @@ void initialize_heap() {
 
 size_t calculateSize(size_t requestSize) {
     // Header size, Footer, Next & Prev Ptrs, Requested Size (alignment = multiple of 64)
+    requestSize += 8;
+    if (requestSize % 64 == 0) return requestSize;
     size_t result = requestSize + (64 - (requestSize % 64));
     return result;
 }
 
 void *find_freelist(size_t requestSize) {
+
     int index =  requestSize / 64;
     int isWilderness = 0;
 
     // Let's check if the index is valid:
     if (index < 0) {
         sf_errno = ENOMEM;
-        debug("INDEX: %d ", index);
         return NULL;
     }
 
@@ -364,6 +366,17 @@ void *createFreeBlock(size_t requestSize) {
         sf_block *nextBlock = wilderness + requestSize;
         nextBlock->prev_footer = (requestSize | 1 | initialPrevAlloc); // this would be the epilogue
 
+        // Make next block also PAL = 1 (the targetBlock was a free block)
+        nextBlock->header = (nextBlock->header) | 2; // 10 for PAL
+
+        // IF IT'S A FREE BLOCK, UPDATE FOOTER TOO
+        if ( (nextBlock->header & THIS_BLOCK_ALLOCATED) == 0) {
+            size_t nextBlockSize = (size_t) nextBlock->header & BLOCK_SIZE_MASK;
+            void *nextBlock_footerAddr = (wilderness + requestSize) + (nextBlockSize);
+            sf_block *nextBlockfooter = (sf_block *) nextBlock_footerAddr;
+            nextBlockfooter->prev_footer = (nextBlock->header);
+        }
+
         return wilderness;
     }
     else if (new_WildernessSize > requestSize) {
@@ -475,8 +488,8 @@ void *coalesce(void *pointer) {
     size_t ptrBlock_size = (size_t) ptrBlock->header & BLOCK_SIZE_MASK;
 
     // Boolean markers for allocation
-    int nextBlockAllocated;
-    int prevBlockAllocated;
+    int nextBlockAllocated = 0;
+    int prevBlockAllocated = 0;
 
     // NEXT BLOCK (AFTER POINTER BLOCK)
     void *ptrBlock_footer = pointer + ptrBlock_size;
@@ -484,6 +497,9 @@ void *coalesce(void *pointer) {
     if ( (nextBlock->header & THIS_BLOCK_ALLOCATED) == 1) nextBlockAllocated = 1;
 
     // PREVIOUS BLOCK (BEFORE POINTER BLOCK)
+
+    // Problem: allocated block DOES NOT have a footer
+    // Assuming that there is a prev_footer (it is allocated)
     size_t prevBlock_size = ptrBlock->prev_footer & BLOCK_SIZE_MASK;
     void *prevBlock_address = pointer - prevBlock_size;
     sf_block *prevBlock = (sf_block*) prevBlock_address; // goes to prev_footer of the previous block
@@ -494,9 +510,13 @@ void *coalesce(void *pointer) {
 
     // Combine:
 
+    // debug("PREVBLOCKALLOCATED: %d ", (int) prevBlockAllocated );
+    // debug("NEXTBLOCKALLOCATED: %d \n", nextBlockAllocated);
+
     // If nextBlock is FREE but prevBlock is ALLOCATED
     if ( (nextBlockAllocated != 1) && (prevBlockAllocated == 1) ) {
 
+        // debug("TESTINGTESTINGTESTING");
         // Remove Next Block's LINKS:
         sf_block *nextFreeBlock_next = nextBlock->body.links.next;
         sf_block *prevFreeBlock_next = nextBlock->body.links.prev;
@@ -504,6 +524,8 @@ void *coalesce(void *pointer) {
         prevFreeBlock_next->body.links.next = nextBlock->body.links.next;
         nextBlock->body.links.next = NULL;
         nextBlock->body.links.prev = NULL;
+
+        // debug("TEST1");
 
         // Add nextBlock size to Block size
         size_t nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
@@ -518,12 +540,7 @@ void *coalesce(void *pointer) {
         sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr1; // block after newBlock (block
         nextBlock_after->prev_footer = (overallSize | 2); // Footer same as header
 
-        // Change PAL of after next block (both HEADER AND FOOTER)
-        nextBlock_after->header = (nextBlock_after->header) - 2;
-        int nextBlock_afterSize = nextBlock->header & BLOCK_SIZE_MASK;
-        void *nextBlockafterAddr2 = nextBlock_afterAddr1 + nextBlock_afterSize; // AFTER next blocks' next block
-        sf_block *after_nextBlockafter = (sf_block *) nextBlockafterAddr2;
-        after_nextBlockafter->prev_footer = (nextBlock_after->header);
+        // Since next block is free, we assume that the PAL of the block after that is already 0
 
         // newBlock declarations
         newBlock_address = pointer;
@@ -542,6 +559,8 @@ void *coalesce(void *pointer) {
         prevBlock->body.links.next = NULL;
         prevBlock->body.links.prev = NULL;
 
+        // debug("TEST2");
+
         // Add prevBlock size to Block size
         size_t prevBlock_size = prevBlock->header & BLOCK_SIZE_MASK;
         size_t overallSize = ptrBlock_size + prevBlock_size;
@@ -549,18 +568,19 @@ void *coalesce(void *pointer) {
         // Start from prevBlock header, end at ptrBlock footer
 
         // Fix size of header
-        int prevBlock_prevAllocated = prevBlock->prev_footer & THIS_BLOCK_ALLOCATED; // If block before prevBlock is allocated
+        int prevBlock_prevAllocated = prevBlock->header & PREV_BLOCK_ALLOCATED; // If block before prevBlock is allocated
         prevBlock->header = (overallSize | prevBlock_prevAllocated);
 
         // Fix size of ptrBlock's footer
         nextBlock->prev_footer = (overallSize | prevBlock_prevAllocated);
 
         // next block should have pal = 0 (change its header and footer)
-        nextBlock->header = (nextBlock->header) - 2;
-        int nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
-        void *nextBlock_afterAddr = ptrBlock_footer + nextBlock_size; // block after nextBlock (address)
-        sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr; // block after newBlock (block
-        nextBlock_after->prev_footer = (nextBlock->header); // Footer same as header
+        // The block will always be an allocated block
+        nextBlock->header = (nextBlock->header) - 2; // Take off two because you're making this block free (and PAL was previously 1)
+        // int nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
+        // void *nextBlock_afterAddr = ptrBlock_footer + nextBlock_size; // block after nextBlock (address)
+        // sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr; // block after newBlock (block
+        // nextBlock_after->prev_footer = (nextBlock->header); // Footer same as header
 
         // newBlock declarations
 
@@ -573,16 +593,19 @@ void *coalesce(void *pointer) {
     else if ( (nextBlockAllocated == 1) && (prevBlockAllocated == 1) ) {
         // No coalescing, just place into heap
 
+        // debug("TEST3");
+
         // Change header and footer to alloc = 1.
         ptrBlock->header = (ptrBlock->header - 1); // taking out ALLOCATED bit.
         nextBlock->prev_footer = (ptrBlock->header); // footer equivalent to header
 
         // Next block should have pal = 0. (change it's header and footer)
+        // The next block will always be an allocated block, so no footer
         nextBlock->header = (nextBlock->header) - 2;
-        int nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
-        void *nextBlock_afterAddr = ptrBlock_footer + nextBlock_size; // block after nextBlock (address)
-        sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr; // block after newBlock (block
-        nextBlock_after->prev_footer = (nextBlock->header); // Footer same as header
+        // int nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
+        // void *nextBlock_afterAddr = ptrBlock_footer + nextBlock_size; // block after nextBlock (address)
+        // sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr; // block after newBlock (block
+        // nextBlock_after->prev_footer = (nextBlock->header); // Footer same as header
 
         // NewBlock declarations
         newBlock_address = pointer;
@@ -593,6 +616,8 @@ void *coalesce(void *pointer) {
     else {
 
         // Both prevBlock and nextBlock are FREE! (COALESCE BOTH)
+
+                // debug("TEST4");
 
         size_t prevBlock_size = prevBlock->header & BLOCK_SIZE_MASK;
         size_t nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
@@ -618,26 +643,31 @@ void *coalesce(void *pointer) {
 
         // Start at prevBlock header, end at nextBlock footer
 
-        // Fix size of header
-        int prevBlock_prevAllocated = prevBlock->prev_footer & THIS_BLOCK_ALLOCATED; // If block before prevBlock is allocated
-        prevBlock->header = (overallSize | prevBlock_prevAllocated);
 
         // Fix size of nextBlock's footer
         void *nextBlock_afterAddr1 = ptrBlock_footer + nextBlock_size; // block after nextBlock (address)
         sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr1; // block after newBlock (block
-        nextBlock_after->prev_footer = (overallSize | prevBlock_prevAllocated); // Footer same as header
 
-        // Change PAL of after next block (both HEADER AND FOOTER)
-        nextBlock_after->header = (nextBlock_after->header) - 2;
-        int nextBlock_afterSize = nextBlock->header & BLOCK_SIZE_MASK;
-        void *nextBlockafterAddr2 = nextBlock_afterAddr1 + nextBlock_afterSize; // AFTER next blocks' next block
-        sf_block *after_nextBlockafter = (sf_block *) nextBlockafterAddr2;
-        after_nextBlockafter->prev_footer = (nextBlock_after->header);
+        // save Previous Block's PAL
+
+        int prevBlock_prevAllocated = prevBlock->header & PREV_BLOCK_ALLOCATED;
+        prevBlock->header = (overallSize | prevBlock_prevAllocated); // previous is allocated
+        nextBlock_after->prev_footer = (overallSize | prevBlock_prevAllocated); // Footer same as header
 
         // newBlock declarations
 
         newBlock_address = prevBlock_address;
         newBlock = (sf_block *) prevBlock_address;
+
+        // Change PAL of after next block (both HEADER AND FOOTER)
+
+        // void *afterNewBlock_addr = ptrBlock_footer + nextBlock_size;
+        // sf_block *afterNewBlock = (sf_block *) afterNewBlock_addr;
+        // afterNewBlock->header -= 2;
+        // void *afterNewBlock_footerAddr = afterNewBlock_addr +  (afterNewBlock->header & BLOCK_SIZE_MASK);
+        // sf_block *after_afterNewBlock = (sf_block *) afterNewBlock_footerAddr;
+        // after_afterNewBlock->prev_footer = (afterNewBlock->header);
+
 
     }
 

@@ -5,22 +5,23 @@ int main(int argc, char const *argv[]) {
 
     // sf_mem_init();
 
-    void *x = sf_malloc(8);
-    void *abc = sf_malloc(32);
-    void *z = sf_malloc(1);
-    void *test1 = sf_malloc(900);
-    void *test2 = sf_malloc(4000);
-    // ---------------------
+    // sf_malloc(200);
+    // /* void *v = */ sf_malloc(300);
+    // sf_malloc(200);
+    //  void *x =  sf_malloc(500);
+    // sf_malloc(200);
+    // /* void *z = */ sf_malloc(700);
 
-    sf_free(z);
-    sf_free(x);
-    sf_free(abc);
-    sf_free(test1);
-    sf_free(test2);
+    // sf_free(u);
+    // sf_free(w);
+    // sf_free(y);
+    sf_malloc(3 * PAGE_SZ - ((1 << 6) - sizeof(sf_header)) - 64 - 2*sizeof(sf_header));
+      sf_show_heap();
+    return 0;
 
-    sf_malloc(57);
 
-            sf_show_heap();
+
+    sf_show_heap();
     sf_mem_fini();
     return 0;
     // ---------------------
