@@ -19,6 +19,8 @@ int findIndex(int size);
 void *createFreeBlock(size_t request);
 int checkPointer(void *pointer);
 void *coalesce(void *pointer);
+int checkPowerofTwo(size_t number);
+size_t calculateSizeAlign(size_t size, size_t align);
 
 int first_allocation = 0;
 void *sf_malloc(size_t size) {
@@ -95,7 +97,7 @@ void *sf_realloc(void *pp, size_t rsize) {
         // rsize is smaller, so either split or update with smaller header (if splinter)
         size_t adjustedSize = calculateSize(rsize);
         size_t ptrBlock_size = ptrBlock->header & BLOCK_SIZE_MASK;
-
+        debug("SMALLER");
         if (adjustedSize == ptrBlock_size) {
             // DO NOT SPLIT
             debug("Dont split");
@@ -148,7 +150,74 @@ void *sf_realloc(void *pp, size_t rsize) {
 }
 
 void *sf_memalign(size_t size, size_t align) {
-    return NULL;
+
+    // Check if requested alignment is at least as large as the minimum block size
+    if (align < 64) { sf_errno = EINVAL; return NULL; }
+
+    // Check if requested alignment is a power of two
+    int resultPower = checkPowerofTwo(align);
+    if (resultPower == -1) { sf_errno = EINVAL; return NULL; }
+
+    size_t blocksize = calculateSizeAlign(size, align);
+    debug("blocksize ---> %d ", (int)blocksize );
+    void *mallocPtr = sf_malloc(blocksize);
+
+    void *startBlock = mallocPtr - 16;
+    sf_block *mallocBlock = (sf_block *) startBlock;
+    int mallocBlock_size = mallocBlock->header & BLOCK_SIZE_MASK;
+
+    uintptr_t ptrBlock_Address = (uintptr_t)&mallocBlock->body.payload; // To get unsigned num for hex pointer
+    if (ptrBlock_Address % align == 0) {
+
+        // (ALIGNED) Don't do anything
+
+    }
+    else {
+        // (NOT ALIGNED) split, free previous block, realloc, return
+        debug("NOT ALIGNED");
+
+        // Re-allocate the size
+        // return NULL;
+        int remainder = (int) ptrBlock_Address % align; // ptrBlock_address needs ptrBlock_address + remainder to be allocated
+        int allocatedBlockSize = mallocBlock_size - remainder;
+
+        // First part = free block, Second part = allocated block
+        // Allocated block starts at aligned address, goes as far as it has to
+
+        int prevAllocated_Original = mallocBlock->header & PREV_BLOCK_ALLOCATED;
+
+        // Free block, everything before the aligned address
+
+        // Let's set the free block
+        void *free_block_start = startBlock;
+        sf_block *new_freeBlock = (sf_block *) free_block_start;
+        new_freeBlock->header = (size_t) remainder | prevAllocated_Original;
+
+        // Add to free block list
+        int freeBlockIndex = findIndex( (int) remainder);
+        new_freeBlock->body.links.prev = sf_free_list_heads[freeBlockIndex].body.links.prev;
+        new_freeBlock->body.links.next = &sf_free_list_heads[freeBlockIndex];
+        (new_freeBlock->body.links.next)->body.links.prev = new_freeBlock;
+        sf_free_list_heads[freeBlockIndex].body.links.next = new_freeBlock;
+
+        // Let's set the allocated block
+        void *new_allocatedBlockAddr = free_block_start + remainder;
+        sf_block *new_allocatedBlock = (sf_block *) new_allocatedBlockAddr;
+        new_allocatedBlock->prev_footer = (new_freeBlock->header);
+        new_allocatedBlock->header = allocatedBlockSize | 1; // 1 because it's allocated. Previous block is a free block.
+
+        // NOW, IF THAT SIZE IS TOO BIG, REALLOC TO REQUESTED SIZE:
+        if (allocatedBlockSize > size) {
+            void *new_mallocPtr = sf_realloc( (new_allocatedBlockAddr + 16), size); // realloc handles the free blocks and all that
+            return new_mallocPtr;
+        }
+
+        // Else:
+        return new_allocatedBlockAddr;
+    }
+
+
+    return mallocPtr;
 }
 
 // -----------------------------------------------------------------------------------------------------------------------
@@ -547,12 +616,13 @@ int checkPointer(void *pointer) {
     // Check if NOT ALLOCATED
     void *ptr_address = pointer - 16;
     sf_block *ptrBlock = (sf_block *) ptr_address; // Now points to the start of the block (with prev_footer)
+    size_t block_size = ptrBlock->header & BLOCK_SIZE_MASK;
     int allocated = (ptrBlock->header & THIS_BLOCK_ALLOCATED);
     if (allocated == 0) return -1; // "if ptr is invalid, call abort()"
 
-    // Check if block size is aligned with 64 boundary
-    size_t block_size = ptrBlock->header & BLOCK_SIZE_MASK;
-    if (block_size % 64 != 0) return -1;
+    // Check if POINTER ADDRESS is aligned with 64 boundary (NOT BLOCK)
+    uintptr_t ptrBlock_Address = (uintptr_t)&ptrBlock->body.payload;
+    if (ptrBlock_Address % 64 != 0) return -1;
 
     // Check if "the header of the block = before enbd of the prologue"
     // Check if "the footer of the block = after beginning of epilogue"
@@ -766,4 +836,28 @@ void *coalesce(void *pointer) {
     sf_free_list_heads[listIndex].body.links.next = newBlock; // sentintel node's next is newBlock
 
     return newBlock;
+}
+
+// Returns -1 if failure, 0 if success
+int checkPowerofTwo(size_t number) {
+
+    if (number == 0) return -1;
+    // Else, traverse:
+
+    while (number != 1) {
+
+        if (number % 2 > 0) return -1;
+        else number /= 2; // next iteration
+
+    } // end of while loop
+
+    return 0;
+}
+
+size_t calculateSizeAlign(size_t size, size_t align) {
+
+    size += align;
+    size += 64;
+    // size += 8;
+    return size;
 }

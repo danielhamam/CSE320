@@ -3,9 +3,19 @@
 
 int main(int argc, char const *argv[]) {
 
-    // sf_mem_init();
-    void *x = sf_malloc(sizeof(int) * 20);
-    sf_realloc(x, sizeof(int) * 16);
+
+    sf_memalign(300, 512);
+    // sf_malloc(sizeof(double) * 8);
+    // sf_realloc(x, 350);
+
+    // char *x = sf_malloc(200);
+    // sf_free(x);
+    // char *y = sf_malloc(2000);
+    // sf_realloc(y, 1000);
+    // sf_free(y);
+    // char *z = sf_malloc(2033);
+    // sf_realloc(z, 200);
+
 
     sf_show_heap();
     sf_mem_fini(); // call at end of program to avoid valgrind errors
