@@ -63,6 +63,7 @@ void sf_free(void *pp) {
 void *sf_realloc(void *pp, size_t rsize) {
 
     int ptrNum = checkPointer(pp);
+    int edited_rsize = calculateSize(rsize);
     if (ptrNum == -1) abort();
     // Else, we can continue. The pointer is valid.
 
@@ -75,8 +76,8 @@ void *sf_realloc(void *pp, size_t rsize) {
         return NULL;
     }
 
-    if (rsize == (ptrBlock->header & BLOCK_SIZE_MASK)) return pp;
-    else if (rsize > (ptrBlock->header & BLOCK_SIZE_MASK)) {
+    if (edited_rsize == (ptrBlock->header & BLOCK_SIZE_MASK)) return pp;
+    if (edited_rsize > (ptrBlock->header & BLOCK_SIZE_MASK)) {
 
         void *newPP = sf_malloc(rsize);
 
@@ -732,11 +733,9 @@ void *coalesce(void *pointer) {
 
         // next block should have pal = 0 (change its header and footer)
         // The block will always be an allocated block
+        int nextBlock_prevAlloc = (int) nextBlock->header & PREV_BLOCK_ALLOCATED;
+        if (nextBlock_prevAlloc == 2) nextBlock->header = (nextBlock->header) - 2;
         nextBlock->header = (nextBlock->header) - 2; // Take off two because you're making this block free (and PAL was previously 1)
-        // int nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
-        // void *nextBlock_afterAddr = ptrBlock_footer + nextBlock_size; // block after nextBlock (address)
-        // sf_block *nextBlock_after = (sf_block *) nextBlock_afterAddr; // block after newBlock (block
-        // nextBlock_after->prev_footer = (nextBlock->header); // Footer same as header
 
         // newBlock declarations
 
@@ -751,12 +750,19 @@ void *coalesce(void *pointer) {
 
         // Change header and footer to alloc = 1.
 
-        ptrBlock->header = ptrBlock->header - 1; // taking out ALLOCATED bit.
+        debug("TEST 3");
+
+        int ptrBlock_alloc = (int) ptrBlock->header & THIS_BLOCK_ALLOCATED;
+        if (ptrBlock_alloc == 1) ptrBlock->header = ptrBlock->header - 1; // taking out ALLOCATED bit.
+
         nextBlock->prev_footer = ptrBlock->header; // footer equivalent to header
 
         // Next block should have pal = 0. (change it's header and footer)
         // The next block will always be an allocated block, so no footer
-        nextBlock->header = (nextBlock->header) - 2;
+        // int nextblock_allocated = nextBlock
+
+        int nextBlock_prevAlloc = (int) nextBlock->header & PREV_BLOCK_ALLOCATED;
+        if (nextBlock_prevAlloc == 2) nextBlock->header = (nextBlock->header) - 2;
 
         // NewBlock declarations
         newBlock_address = pointer;

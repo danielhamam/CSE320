@@ -3,8 +3,24 @@
 
 int main(int argc, char const *argv[]) {
 
+    // sf_malloc(64);
+    void *x = sf_malloc(1);
+    void *y = sf_malloc(65);
+    void *z = sf_malloc(324);
+    void *b = sf_malloc(512);
+    void *c = sf_malloc(3850);
 
-    sf_memalign(300, 512);
+    sf_realloc(x, 64);
+    sf_realloc(y, 32);
+    sf_realloc(z, 128);
+
+    sf_realloc(b, 256);
+    sf_realloc(c, 2048);
+
+
+
+
+    // sf_memalign(300, 512);
     // sf_malloc(sizeof(double) * 8);
     // sf_realloc(x, 350);
 
