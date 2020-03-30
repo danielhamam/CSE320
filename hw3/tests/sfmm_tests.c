@@ -205,3 +205,15 @@ Test(sf_memsuite_student, realloc_smaller_block_free_block, .init = sf_mem_init,
 //DO NOT DELETE THESE COMMENTS
 //############################################
 
+Test(sf_memsuite_student, memalign_pushup_normal, .init = sf_mem_init, .fini = sf_mem_fini) {
+	sf_memalign(700, 1024);
+
+	// cr_assert_not_null(b, "b is NULL!");
+
+	// There should be one free block of size 256 and one free block of size 2944
+	assert_free_block_count(0, 2);
+	assert_free_list_size(3, 1);
+	assert_free_list_size(NUM_FREE_LISTS-1, 1);
+	// assert_free_block_count(256, 1);
+	// assert_free_block_count(2944, 1);
+}

@@ -165,15 +165,11 @@ void *sf_memalign(size_t size, size_t align) {
 
     size_t blocksize = calculateSizeAlign(size, align);
 
-    debug("BEFORE malloc Block Size ---> %d ", (int) blocksize );
-
     void *mallocPtr = sf_malloc(blocksize);
 
     void *startBlock = mallocPtr - 16;
     sf_block *mallocBlock = (sf_block *) startBlock;
     int mallocBlock_size = mallocBlock->header & BLOCK_SIZE_MASK;
-
-    debug("AFTER malloc Block Size ---> %d ", (int)mallocBlock_size );
 
     intptr_t payload_Address = (intptr_t) &(mallocBlock->body.payload); // To get unsigned num for hex pointer
     if (payload_Address % align == 0) {
@@ -336,9 +332,10 @@ void *find_freelist(size_t requestSize) {
                 int InitialPreviousAlloc = targetBlock->header & PREV_BLOCK_ALLOCATED;
                 allocatedBlock->header = (size_t) requestSize | (1) | InitialPreviousAlloc; // for allocated (1)
 
-                // Change next block's PAL
+                // Change next block's PAL and remove footer
                 void *nextBlockAddr = block_address + foundSize;
                 sf_block *nextBlock = (sf_block *) nextBlockAddr;
+                nextBlock->prev_footer = 0;
                 int nextBlockPrevAlloc = nextBlock->header & PREV_BLOCK_ALLOCATED;
                 if (nextBlockPrevAlloc == 0) nextBlock->header += 2;
 
