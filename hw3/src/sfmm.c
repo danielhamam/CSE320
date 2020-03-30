@@ -302,7 +302,7 @@ void *find_freelist(size_t requestSize) {
 
     // int index = requestSize / 64;
     int index = findIndex(requestSize);
-            debug("INDEX: %d ", index);
+            // debug("INDEX: %d ", index);
     int isWilderness = 0;
 
     // Let's check if the index is valid:
@@ -335,6 +335,12 @@ void *find_freelist(size_t requestSize) {
 
                 int InitialPreviousAlloc = targetBlock->header & PREV_BLOCK_ALLOCATED;
                 allocatedBlock->header = (size_t) requestSize | (1) | InitialPreviousAlloc; // for allocated (1)
+
+                // Change next block's PAL
+                void *nextBlockAddr = block_address + foundSize;
+                sf_block *nextBlock = (sf_block *) nextBlockAddr;
+                int nextBlockPrevAlloc = nextBlock->header & PREV_BLOCK_ALLOCATED;
+                if (nextBlockPrevAlloc == 0) nextBlock->header += 2;
 
                 // REMOVE FREE LIST FROM ARRAY
                 sf_block *nextFreeBlock = allocatedBlock->body.links.next;
