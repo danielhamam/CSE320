@@ -126,9 +126,13 @@ void *sf_realloc(void *pp, size_t rsize) {
 
             // Take out prev allocated of next block (FOR ITS HEADER AND FOOTER)
             afterFreeBlock->header = (afterFreeBlock->header) - 2;
-            void *footer_afterFreeBlockAddr = freeBlock_footerAddr + (int) (afterFreeBlock->header & BLOCK_SIZE_MASK);
-            sf_block *footer_afterFreeBlock = (sf_block *) footer_afterFreeBlockAddr;
-            footer_afterFreeBlock->prev_footer = (afterFreeBlock->header);
+
+            // Only change footer if its a free block
+            if ( (afterFreeBlock->header & THIS_BLOCK_ALLOCATED) != 1) {
+                void *footer_afterFreeBlockAddr = freeBlock_footerAddr + (int) (afterFreeBlock->header & BLOCK_SIZE_MASK);
+                sf_block *footer_afterFreeBlock = (sf_block *) footer_afterFreeBlockAddr;
+                footer_afterFreeBlock->prev_footer = (afterFreeBlock->header);
+            }
 
             // Remove links from allocated block (has no links, just precaution)
             ptrBlock->body.links.prev = NULL;
@@ -160,58 +164,65 @@ void *sf_memalign(size_t size, size_t align) {
     if (resultPower == -1) { sf_errno = EINVAL; return NULL; }
 
     size_t blocksize = calculateSizeAlign(size, align);
-    debug("blocksize ---> %d ", (int)blocksize );
+
+    debug("BEFORE malloc Block Size ---> %d ", (int) blocksize );
+
     void *mallocPtr = sf_malloc(blocksize);
 
     void *startBlock = mallocPtr - 16;
     sf_block *mallocBlock = (sf_block *) startBlock;
     int mallocBlock_size = mallocBlock->header & BLOCK_SIZE_MASK;
 
-    uintptr_t ptrBlock_Address = (uintptr_t)&mallocBlock->body.payload; // To get unsigned num for hex pointer
-    if (ptrBlock_Address % align == 0) {
+    debug("AFTER malloc Block Size ---> %d ", (int)mallocBlock_size );
+
+    intptr_t payload_Address = (intptr_t) &(mallocBlock->body.payload); // To get unsigned num for hex pointer
+    if (payload_Address % align == 0) {
 
         // (ALIGNED) Don't do anything
 
     }
     else {
-        // (NOT ALIGNED) split, free previous block, realloc, return
-        debug("NOT ALIGNED");
 
-        // Re-allocate the size
-        // return NULL;
-        int remainder = (int) ptrBlock_Address % align; // ptrBlock_address needs ptrBlock_address + remainder to be allocated
-        int allocatedBlockSize = mallocBlock_size - remainder;
+        // (NOT ALIGNED) split, free previous block, realloc, return
+
+        int remainder;
+        int pushUp;
+        int allocatedBlockSize;
+
+            // Re-allocate the size
+            remainder = (int) payload_Address % align; // ptrBlock_address needs ptrBlock_address + remainder to be allocated
+
+            // (payload_address + pushUp) % align = 0
+            // 500 mod 216 = 68. If you do 216 - 68, then you push 500 up by 148.
+
+            pushUp = align - remainder;
+            // pushUp = pushUp - 16; // because start of block is 16 before
+            allocatedBlockSize = mallocBlock_size - pushUp;
+            debug("PUSHUP --> %d ", pushUp);
 
         // First part = free block, Second part = allocated block
-        // Allocated block starts at aligned address, goes as far as it has to
-
-        int prevAllocated_Original = mallocBlock->header & PREV_BLOCK_ALLOCATED;
-
-        // Free block, everything before the aligned address
 
         // Let's set the free block
+        int prevAllocated_Original = mallocBlock->header & PREV_BLOCK_ALLOCATED;
         void *free_block_start = startBlock;
         sf_block *new_freeBlock = (sf_block *) free_block_start;
-        new_freeBlock->header = (size_t) remainder | prevAllocated_Original;
-
-        // Add to free block list
-        int freeBlockIndex = findIndex( (int) remainder);
-        new_freeBlock->body.links.prev = sf_free_list_heads[freeBlockIndex].body.links.prev;
-        new_freeBlock->body.links.next = &sf_free_list_heads[freeBlockIndex];
-        (new_freeBlock->body.links.next)->body.links.prev = new_freeBlock;
-        sf_free_list_heads[freeBlockIndex].body.links.next = new_freeBlock;
+        new_freeBlock->header = (size_t) pushUp | prevAllocated_Original;
 
         // Let's set the allocated block
-        void *new_allocatedBlockAddr = free_block_start + remainder;
+        void *new_allocatedBlockAddr = startBlock + pushUp;
         sf_block *new_allocatedBlock = (sf_block *) new_allocatedBlockAddr;
         new_allocatedBlock->prev_footer = (new_freeBlock->header);
         new_allocatedBlock->header = allocatedBlockSize | 1; // 1 because it's allocated. Previous block is a free block.
 
+        coalesce(free_block_start);
+
         // NOW, IF THAT SIZE IS TOO BIG, REALLOC TO REQUESTED SIZE:
         if (allocatedBlockSize > size) {
+            debug("SECOND ---> REALLOC");
             void *new_mallocPtr = sf_realloc( (new_allocatedBlockAddr + 16), size); // realloc handles the free blocks and all that
             return new_mallocPtr;
         }
+
 
         // Else:
         return new_allocatedBlockAddr;
@@ -289,7 +300,9 @@ size_t calculateSize(size_t requestSize) {
 
 void *find_freelist(size_t requestSize) {
 
-    int index =  requestSize / 64;
+    // int index = requestSize / 64;
+    int index = findIndex(requestSize);
+            debug("INDEX: %d ", index);
     int isWilderness = 0;
 
     // Let's check if the index is valid:
