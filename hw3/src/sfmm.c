@@ -175,6 +175,7 @@ void *sf_memalign(size_t size, size_t align) {
     if (payload_Address % align == 0) {
 
         // (ALIGNED) Don't do anything
+        return &(mallocBlock->body.payload);
 
     }
     else {
@@ -218,14 +219,10 @@ void *sf_memalign(size_t size, size_t align) {
             void *new_mallocPtr = sf_realloc( (new_allocatedBlockAddr + 16), size); // realloc handles the free blocks and all that
             return new_mallocPtr;
         }
-
-
         // Else:
-        return new_allocatedBlockAddr;
+
+        return &(new_allocatedBlock->body.payload);
     }
-
-
-    return mallocPtr;
 }
 
 // -----------------------------------------------------------------------------------------------------------------------

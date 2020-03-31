@@ -205,15 +205,22 @@ Test(sf_memsuite_student, realloc_smaller_block_free_block, .init = sf_mem_init,
 //DO NOT DELETE THESE COMMENTS
 //############################################
 
-Test(sf_memsuite_student, memalign_pushup_normal, .init = sf_mem_init, .fini = sf_mem_fini) {
-	sf_memalign(700, 1024);
+Test(sf_memsuite_student, memalign_normal, .init = sf_mem_init, .fini = sf_mem_fini) {
 
-	// cr_assert_not_null(b, "b is NULL!");
+    void *test = sf_memalign(730,1024);
+    void *location = test - 16;
+    sf_block *returnBlock = (sf_block *) location;
+    uintptr_t payload_Address = (intptr_t) &(returnBlock->body.payload); // To get unsigned num for hex pointer
 
-	// There should be one free block of size 256 and one free block of size 2944
-	assert_free_block_count(0, 2);
-	assert_free_list_size(3, 1);
-	assert_free_list_size(NUM_FREE_LISTS-1, 1);
-	// assert_free_block_count(256, 1);
-	// assert_free_block_count(2944, 1);
+    cr_assert_not_null(test, "test is NULL!");
+
+    // Check if aligned
+    int result = (int) payload_Address % 1024; // if 0, true. else false.
+    int isAligned;
+
+    if (result == 0) isAligned = 1; // not 0 = true
+    else isAligned = 0; // 0 = false
+
+    cr_assert(isAligned, "Payload is not aligned!");
+
 }
