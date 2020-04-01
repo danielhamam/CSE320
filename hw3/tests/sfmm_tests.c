@@ -224,3 +224,77 @@ Test(sf_memsuite_student, memalign_normal, .init = sf_mem_init, .fini = sf_mem_f
     cr_assert(isAligned, "Payload is not aligned!");
 
 }
+
+Test(sf_memsuite_student, malloc_realloc_memalign, .init = sf_mem_init, .fini = sf_mem_fini) {
+
+	void *b = sf_malloc(5000);
+	void *y = sf_realloc(b, 1500);
+	void * alignPtr = sf_memalign(120, 512);
+
+    void *location = alignPtr - 16;
+    sf_block *returnBlock = (sf_block *) location;
+    uintptr_t payload_Address = (intptr_t) &(returnBlock->body.payload); // To get unsigned num for hex pointer
+
+    cr_assert_not_null(b, "Malloc result is NULL!");
+    cr_assert_not_null(y, "Realloc result is NULL!");
+    cr_assert_not_null(alignPtr, "Memalign result is NULL!");
+
+    // Check if aligned
+    int result = (int) payload_Address % 512;
+    int isAligned;
+
+    if (result == 0) isAligned = 1; // not 0 = true
+    else isAligned = 0; // 0 = false
+
+    cr_assert(isAligned, "Payload is not aligned!");
+
+}
+
+Test(sf_memsuite_student, memalign_realloc_free, .init = sf_mem_init, .fini = sf_mem_fini) {
+
+	void *alignPtr = sf_memalign(60, 2048);
+
+	void *location = alignPtr - 16;
+    sf_block *returnBlock = (sf_block *) location;
+    uintptr_t payload_Address = (intptr_t) &(returnBlock->body.payload); // To get unsigned num for hex pointer
+
+	// Check if aligned
+    int result = (int) payload_Address % 2048;
+    int isAligned;
+
+    if (result == 0) isAligned = 1; // not 0 = true
+    else isAligned = 0; // 0 = false
+
+    cr_assert_not_null(alignPtr, "Memalign result is NULL!");
+    cr_assert(isAligned, "Payload is not aligned!");
+
+    // MEMALIGN WORKS, NOW REALLOC AND FREE
+    void *alignPtr2 = sf_realloc(alignPtr, 500);
+
+	cr_assert_not_null(alignPtr2, "Realloc result is NULL!");
+	sf_free(alignPtr2);
+
+    // The heap should be back to normal (ONLY ONE FREE BLOCK)
+    assert_free_block_count(0, 1);
+}
+
+Test(sf_memsuite_student, memalign_notPowerofTwo, .init = sf_mem_init, .fini = sf_mem_fini) {
+
+	// 2048 is a power of two, so let's make sure the 48 numbers before lead to a NULL return
+	// returnPtr should return NULL
+	int i;
+	for (i = 2000; i < 2048; i++) {
+		void *returnPtr = sf_memalign(150, i);
+		cr_assert_null(returnPtr, "Memalign result is not NULL!");
+	}
+}
+
+Test(sf_memsuite_student, free_ABORT, .init = sf_mem_init, .fini = sf_mem_fini, .signal = SIGABRT) {
+
+	sf_malloc(1500); // To initialize the heap
+	void *before_prologueFinish = sf_mem_start() + 15;
+	sf_free(before_prologueFinish);
+
+	// .signal = SIGABRT should be awaiting an abort, true if it does
+
+}

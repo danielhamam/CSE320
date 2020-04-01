@@ -258,7 +258,7 @@ void initialize_heap() {
     sf_block *wilderness = (sf_block *) startHeap;
     int space = (sf_mem_end() - 16) - startHeap;
     // debug("SPACE: %d", space);
-    // wilderness->prev_footer = (size_t) 67; I took this out because allocated blocks dont have a footer!
+    wilderness->prev_footer = (size_t) 67;
     wilderness->header = (size_t) space | 2; // prev_alloc is 1 because of prologue
 
     sf_free_list_heads[NUM_FREE_LISTS - 1].body.links.next = (wilderness);
@@ -638,7 +638,7 @@ int checkPointer(void *pointer) {
     uintptr_t ptrBlock_Address = (uintptr_t)&ptrBlock->body.payload;
     if (ptrBlock_Address % 64 != 0) return -1;
 
-    // Check if "the header of the block = before enbd of the prologue"
+    // Check if "the header of the block = before end of the prologue"
     // Check if "the footer of the block = after beginning of epilogue"
     if ( (pointer + 8) < sf_mem_start() + 64 + 56|| (pointer - 8 + block_size) > sf_mem_end() - 8) return -1;
 
@@ -869,7 +869,6 @@ int checkPowerofTwo(size_t number) {
         else number /= 2; // next iteration
 
     } // end of while loop
-
     return 0;
 }
 
