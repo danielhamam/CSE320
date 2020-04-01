@@ -98,10 +98,10 @@ void *sf_realloc(void *pp, size_t rsize) {
         // rsize is smaller, so either split or update with smaller header (if splinter)
         size_t adjustedSize = calculateSize(rsize);
         size_t ptrBlock_size = ptrBlock->header & BLOCK_SIZE_MASK;
-        debug("SMALLER");
+        // debug("SMALLER");
         if (adjustedSize == ptrBlock_size) {
             // DO NOT SPLIT
-            debug("Dont split");
+            // debug("Dont split");
             return pp;
 
         }
@@ -195,7 +195,7 @@ void *sf_memalign(size_t size, size_t align) {
             pushUp = align - remainder;
             // pushUp = pushUp - 16; // because start of block is 16 before
             allocatedBlockSize = mallocBlock_size - pushUp;
-            debug("PUSHUP --> %d ", pushUp);
+            // debug("PUSHUP --> %d ", pushUp);
 
         // First part = free block, Second part = allocated block
 
@@ -215,7 +215,7 @@ void *sf_memalign(size_t size, size_t align) {
 
         // NOW, IF THAT SIZE IS TOO BIG, REALLOC TO REQUESTED SIZE:
         if (allocatedBlockSize > size) {
-            debug("SECOND ---> REALLOC");
+            // debug("SECOND ---> REALLOC");
             void *new_mallocPtr = sf_realloc( (new_allocatedBlockAddr + 16), size); // realloc handles the free blocks and all that
             return new_mallocPtr;
         }
@@ -695,7 +695,7 @@ void *coalesce(void *pointer) {
         nextBlock->body.links.next = NULL;
         nextBlock->body.links.prev = NULL;
 
-        debug("TEST1");
+        // debug("TEST1");
 
         // Add nextBlock size to Block size
         size_t nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
@@ -729,7 +729,7 @@ void *coalesce(void *pointer) {
         prevBlock->body.links.next = NULL;
         prevBlock->body.links.prev = NULL;
 
-        debug("TEST2");
+        // debug("TEST2");
 
         // Add prevBlock size to Block size
         size_t prevBlock_size = prevBlock->header & BLOCK_SIZE_MASK;
@@ -763,7 +763,7 @@ void *coalesce(void *pointer) {
 
         // Change header and footer to alloc = 1.
 
-        debug("TEST 3");
+        // debug("TEST 3");
 
         int ptrBlock_alloc = (int) ptrBlock->header & THIS_BLOCK_ALLOCATED;
         if (ptrBlock_alloc == 1) ptrBlock->header = ptrBlock->header - 1; // taking out ALLOCATED bit.
@@ -787,7 +787,7 @@ void *coalesce(void *pointer) {
 
         // Both prevBlock and nextBlock are FREE! (COALESCE BOTH)
 
-                debug("TEST4");
+                // debug("TEST4");
 
         size_t prevBlock_size = prevBlock->header & BLOCK_SIZE_MASK;
         size_t nextBlock_size = nextBlock->header & BLOCK_SIZE_MASK;
