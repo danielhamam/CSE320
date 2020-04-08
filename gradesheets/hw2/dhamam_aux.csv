@@ -1,0 +1,8 @@
+Graded Commit:ea743b92273a7b5b331083d79ccfe0e96fd7fc9e
+
+TEST NAME, POINTS,OUT OF
+hstats_suite/hstats_quick_test_1,1,1,
+hstats_suite/hstats_quick_test_2,1,1,
+lstat_suite/no_follow_symlinks_test,1,1,
+no_mb_suite/no_mb_verbose_test,1,1,
+total,5,4

@@ -1,0 +1,21 @@
+Graded Commit:ea743b92273a7b5b331083d79ccfe0e96fd7fc9e
+
+TEST NAME, POINTS,OUT OF
+base_suite/quick_test_1,1,1,
+base_suite/quick_test_2,1,1,
+feature_suite/duplicates_test,1,1,
+feature_suite/height_test,1,1,
+feature_suite/inode_test,1,1,
+feature_suite/sort_test,1,1,
+feature_suite/subdir_test,1,1,
+feature_suite/total_inode_test,1,1,
+feature_suite/total_test,1,1,
+feature_suite/verbose_test,1,1,
+feature_suite/visual_test,1,1,
+lstat_suite/no_follow_symlinks_neg_test,1,1,
+options_suite/getopt_test,1,1,
+options_suite/height_bad_arg_test_1,1,1,
+options_suite/height_bad_arg_test_2,1,1,
+valgrind_suite/valgrind_leak_test,1,1,
+valgrind_suite/valgrind_uninitialized_test,1,1,
+total,20,17
