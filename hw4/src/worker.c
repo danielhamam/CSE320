@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "debug.h"
 #include "polya.h"
@@ -20,16 +21,23 @@ void writeResult(struct result *selectedResult, FILE *out);
 
 int worker(void) {
 
-    // TO BE IMPLEMENTED
     // Work on this first and use demo/polya for testing.
 
-    // Worker Process installs handlers for SIGHUP and SIGTERM
     signal(SIGHUP, sighup_handler);
     signal(SIGTERM, sigterm_handler);
 
-    // continues until find solution, fails to find, or SIGHUP by master to cancel
-    // worker reads problems from standard input and writes results to standard output
-    struct problem *selectProblem = readProblem();
+    while (1) {
+        kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
+    }
+
+    // Worker Process installs handlers for SIGHUP and SIGTERM
+
+
+
+    // When receives master signal SIGCONT:
+        // continues until find solution, fails to find, or SIGHUP by master to cancel
+        // worker reads problems from standard input and writes results to standard output
+    // struct problem *selectProblem = readProblem();
 
     return EXIT_FAILURE;
 }
@@ -134,8 +142,6 @@ void stop_itself(void) {}
 void sighup_handler(void) {}
 
 void sigterm_handler(void) {
-
     // Graceful termination of worker, use exit()
-    exit(2);
-
+    exit(EXIT_SUCCESS);
 }
