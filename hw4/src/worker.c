@@ -15,24 +15,31 @@ void stop_itself(); // fort worker process to stop itself
 void sighup_handler();
 void sigterm_handler();
 
-
 struct problem *readProblem();
 void writeResult(struct result *selectedResult, FILE *out);
+
+volatile sig_atomic_t *CHECK_FLAG = 0; // 0 = Normal Function
 
 int worker(void) {
 
     // Work on this first and use demo/polya for testing.
 
+    // So-called initialiation
     signal(SIGHUP, sighup_handler);
     signal(SIGTERM, sigterm_handler);
 
+    kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
+    struct solver_methods *solvers = NULL;
+
+    // Main loop for reading from master process:
     while (1) {
-        kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
+
+        struct problem *targetProblem = readProblem();
+        struct solver_methods targetMethod = solvers[targetProblem->type];
+        struct result *targetRESULT = targetMethod.solve(targetProblem , CHECK_FLAG);
     }
 
     // Worker Process installs handlers for SIGHUP and SIGTERM
-
-
 
     // When receives master signal SIGCONT:
         // continues until find solution, fails to find, or SIGHUP by master to cancel
@@ -143,5 +150,6 @@ void sighup_handler(void) {}
 
 void sigterm_handler(void) {
     // Graceful termination of worker, use exit()
+    *CHECK_FLAG = -1; // so cancels solution when trying to solve
     exit(EXIT_SUCCESS);
 }
