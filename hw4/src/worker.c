@@ -12,31 +12,34 @@
 
 // Signal Handlers, don't do anything "compilicated"
 void stop_itself(); // fort worker process to stop itself
-void sighup_handler();
-void sigterm_handler();
+void SIGHUP_handler();
+void SIGTERM_handler();
+void SIGCONT_handler();
 
 struct problem *readProblem();
 void writeResult(struct result *selectedResult, FILE *out);
 
 volatile sig_atomic_t *CHECK_FLAG = 0; // 0 = Normal Function
+// volatile sig_atomic_t *continueFlag = 0; // 0 = don't read function
+int flag_succeeded = 0; // 1 for success (for SIGHUP)
 
 int worker(void) {
-
     // Work on this first and use demo/polya for testing.
 
     // So-called initialiation
-    signal(SIGHUP, sighup_handler);
-    signal(SIGTERM, sigterm_handler);
+    signal(SIGHUP, SIGHUP_handler);
+    signal(SIGTERM, SIGTERM_handler);
 
-    kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
-    struct solver_methods *solvers = NULL;
-
-    // Main loop for reading from master process:
+    // Main (infinity) loop for reading from master process: (continues till SIGTERM)
     while (1) {
-
-        struct problem *targetProblem = readProblem();
-        struct solver_methods targetMethod = solvers[targetProblem->type];
+        kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
+        struct problem *targetProblem = readProblem(stdin);
+        struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
         struct result *targetRESULT = targetMethod.solve(targetProblem , CHECK_FLAG);
+        writeResult(targetRESULT, stdout);
+        // free what you malloced
+        free(targetProblem);
+        free(targetRESULT);
     }
 
     // Worker Process installs handlers for SIGHUP and SIGTERM
@@ -61,9 +64,9 @@ int worker(void) {
 /* READING THE PROBLEM FROM INPUT STREAM*/
 // TAKES NOTHING, RETURNS READ PROBLEM
 struct problem *readProblem(FILE *stream) {
-
+    debug("Reading the new problem");
     // Initialize new pointer for problem
-    struct problem *read_problem = NULL;
+    struct problem *read_problem = malloc(sizeof(*read_problem));
 
     // Go byte by byte and read the problem
 
@@ -71,7 +74,7 @@ struct problem *readProblem(FILE *stream) {
     int count_size = 0;
     int tempSize = 0;
     while (count_size < sizeof(size_t)) {
-        int byte = fgetc(stdin);
+        int byte = fgetc(stream);
         if (byte == EOF) exit(EXIT_FAILURE);
         tempSize += byte;
         count_size++;
@@ -124,7 +127,7 @@ struct problem *readProblem(FILE *stream) {
 
     // Sixth, read the char padding[0] variable
     // Seventh, read the char data[0] variable
-    int sizeArrays = (int) read_problem->size - sizeof(struct problem);
+    int sizeArrays = (int) (read_problem->size) - sizeof(struct problem);
 
     char *array = (char *) malloc(sizeArrays); // We allocated for the amount of padding/data
     memcpy(read_problem->data, &array, sizeArrays); // Copy from the array we made to the read_problem->data)
@@ -135,6 +138,7 @@ struct problem *readProblem(FILE *stream) {
 /* WRITING THE PROBLEM TO OUTPUT STREAM*/
 void writeResult(struct result *selectedResult, FILE *out) {
 
+    debug("Writing the result from the worker process");
     char *memHolder = NULL;
     memcpy(&memHolder, &selectedResult, sizeof(*selectedResult));
 
@@ -146,10 +150,18 @@ void writeResult(struct result *selectedResult, FILE *out) {
 
 void stop_itself(void) {}
 
-void sighup_handler(void) {}
+void SIGHUP_handler(void) {
+    // Write result to pipe (might or might not be "failed") --> check if already succeeded
+    // cancel its current solution attempt
+    // if (flag_succeeded == 1)
+    debug("SIGHUP Handler invoked");
 
-void sigterm_handler(void) {
+    kill(getpid(), 19); // SEND ITSELF SIGSTOP
+}
+
+void SIGTERM_handler(void) {
     // Graceful termination of worker, use exit()
+    debug("SIGTERM_handler invoked");
     *CHECK_FLAG = -1; // so cancels solution when trying to solve
     exit(EXIT_SUCCESS);
 }
