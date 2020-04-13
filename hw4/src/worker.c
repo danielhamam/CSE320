@@ -20,7 +20,6 @@ struct problem *readProblem();
 void writeResult(struct result *selectedResult, FILE *out);
 
 volatile sig_atomic_t *CHECK_FLAG = 0; // 0 = Normal Function
-// volatile sig_atomic_t *continueFlag = 0; // 0 = don't read function
 int flag_succeeded = 0; // 1 for success (for SIGHUP)
 
 int worker(void) {
@@ -34,20 +33,15 @@ int worker(void) {
     while (1) {
         kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
         struct problem *targetProblem = readProblem(stdin);
+        debug("read_problem->id %d ", (int) targetProblem->id);
+        debug("read_problem->type %d ", (int) targetProblem->type);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
-        struct result *targetRESULT = targetMethod.solve(targetProblem , CHECK_FLAG);
+        struct result *targetRESULT = targetMethod.solve(targetProblem,CHECK_FLAG);
         writeResult(targetRESULT, stdout);
         // free what you malloced
         free(targetProblem);
-        free(targetRESULT);
+        free(targetRESULT); // malloced in solver, so free now
     }
-
-    // Worker Process installs handlers for SIGHUP and SIGTERM
-
-    // When receives master signal SIGCONT:
-        // continues until find solution, fails to find, or SIGHUP by master to cancel
-        // worker reads problems from standard input and writes results to standard output
-    // struct problem *selectProblem = readProblem();
 
     return EXIT_FAILURE;
 }
@@ -139,13 +133,41 @@ struct problem *readProblem(FILE *stream) {
 void writeResult(struct result *selectedResult, FILE *out) {
 
     debug("Writing the result from the worker process");
-    char *memHolder = NULL;
-    memcpy(&memHolder, &selectedResult, sizeof(*selectedResult));
+    debug("RESULT SIZE --> %d ", (int) selectedResult->size);
+    debug("ID: %d ", selectedResult->id);
+    debug("FAILED: %d ", selectedResult->failed);
 
-    while (memHolder != NULL) {
-        fputc(*memHolder, out);
-        memHolder++;
+    char *charPtr = (char *) selectedResult;
+    while (charPtr != NULL) {
+        fputc(*charPtr, out);
+        charPtr++;
     }
+
+    // int countSize = 0;
+    // int shiftNum = 0;
+    // while (countSize < sizeof(size_t)) {
+    //     int byte = (int) (selectedResult->size >> shiftNum) & 0xFF; // 8 bits in a byte
+    //     fputc(byte, out);
+    //     countSize++;
+    //     shiftNum += 8;
+    // }
+    // int countID = 0;
+    // int shiftNum2 = 0;
+    // while (countID < sizeof(short)) {
+    //     int byte = (int) (selectedResult->id >> shiftNum2) & 0xFF; // 8 bits in a byte
+    //     fputc(byte, out);
+    //     countID++;
+    //     shiftNum2 += 8;
+    // }
+
+    // // Failed is just one byte
+    // fputc(selectedResult->failed, out);
+
+    // // Rest are char arrays
+    // fputs(selectedResult->padding, out);
+    // fputs(selectedResult->data, out);
+
+    fflush(out);
 }
 
 void stop_itself(void) {}
@@ -153,7 +175,7 @@ void stop_itself(void) {}
 void SIGHUP_handler(void) {
     // Write result to pipe (might or might not be "failed") --> check if already succeeded
     // cancel its current solution attempt
-    // if (flag_succeeded == 1)
+    *CHECK_FLAG = 1;
     debug("SIGHUP Handler invoked");
 
     kill(getpid(), 19); // SEND ITSELF SIGSTOP
