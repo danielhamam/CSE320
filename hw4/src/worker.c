@@ -37,6 +37,9 @@ int worker(void) {
         debug("read_problem->type %d ", (int) targetProblem->type);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
         struct result *targetRESULT = targetMethod.solve(targetProblem,CHECK_FLAG);
+
+        post_result(targetRESULT, targetProblem);
+
         writeResult(targetRESULT, stdout);
         // free what you malloced
         free(targetProblem);
@@ -138,34 +141,12 @@ void writeResult(struct result *selectedResult, FILE *out) {
     debug("FAILED: %d ", selectedResult->failed);
 
     char *charPtr = (char *) selectedResult;
-    while (charPtr != NULL) {
+    int countPtr = 0;
+    while (countPtr < sizeof(*selectedResult)) {
         fputc(*charPtr, out);
         charPtr++;
+        countPtr++;
     }
-
-    // int countSize = 0;
-    // int shiftNum = 0;
-    // while (countSize < sizeof(size_t)) {
-    //     int byte = (int) (selectedResult->size >> shiftNum) & 0xFF; // 8 bits in a byte
-    //     fputc(byte, out);
-    //     countSize++;
-    //     shiftNum += 8;
-    // }
-    // int countID = 0;
-    // int shiftNum2 = 0;
-    // while (countID < sizeof(short)) {
-    //     int byte = (int) (selectedResult->id >> shiftNum2) & 0xFF; // 8 bits in a byte
-    //     fputc(byte, out);
-    //     countID++;
-    //     shiftNum2 += 8;
-    // }
-
-    // // Failed is just one byte
-    // fputc(selectedResult->failed, out);
-
-    // // Rest are char arrays
-    // fputs(selectedResult->padding, out);
-    // fputs(selectedResult->data, out);
 
     fflush(out);
 }
@@ -184,6 +165,5 @@ void SIGHUP_handler(void) {
 void SIGTERM_handler(void) {
     // Graceful termination of worker, use exit()
     debug("SIGTERM_handler invoked");
-    *CHECK_FLAG = -1; // so cancels solution when trying to solve
     exit(EXIT_SUCCESS);
 }
