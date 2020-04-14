@@ -33,13 +33,9 @@ int worker(void) {
     while (1) {
         kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
         struct problem *targetProblem = readProblem(stdin);
-        debug("read_problem->id %d ", (int) targetProblem->id);
-        debug("read_problem->type %d ", (int) targetProblem->type);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
+        // debug("MADE IT HERE");
         struct result *targetRESULT = targetMethod.solve(targetProblem,CHECK_FLAG);
-
-        post_result(targetRESULT, targetProblem);
-
         writeResult(targetRESULT, stdout);
         // free what you malloced
         free(targetProblem);
@@ -129,6 +125,9 @@ struct problem *readProblem(FILE *stream) {
     char *array = (char *) malloc(sizeArrays); // We allocated for the amount of padding/data
     memcpy(read_problem->data, &array, sizeArrays); // Copy from the array we made to the read_problem->data)
 
+    debug("read_problem->id %d ", (int) read_problem->id);
+    debug("read_problem->type %d ", (int) read_problem->type);
+
     return read_problem;
 }
 
@@ -136,9 +135,9 @@ struct problem *readProblem(FILE *stream) {
 void writeResult(struct result *selectedResult, FILE *out) {
 
     debug("Writing the result from the worker process");
-    debug("RESULT SIZE --> %d ", (int) selectedResult->size);
-    debug("ID: %d ", selectedResult->id);
-    debug("FAILED: %d ", selectedResult->failed);
+    // debug("RESULT SIZE --> %d ", (int) selectedResult->size);
+    // debug("ID: %d ", selectedResult->id);
+    // debug("FAILED: %d ", selectedResult->failed);
 
     char *charPtr = (char *) selectedResult;
     int countPtr = 0;
