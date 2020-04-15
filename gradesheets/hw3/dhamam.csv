@@ -1,0 +1,50 @@
+Graded Commit:4db567f1faffabd163903bc0a95a5ec2df545e43
+
+TEST NAME, POINTS,OUT OF
+sf_memsuite_grading/free_block_too_small,1,1,
+sf_memsuite_grading/free_null,1,1,
+sf_memsuite_grading/free_prev_alloc,1,1,
+sf_memsuite_grading/free_unallocated,1,1,
+sf_memsuite_grading/initialization,1,1,
+sf_memsuite_grading/malloc_free_coalesce_both,1,1,
+sf_memsuite_grading/malloc_free_coalesce_lower,0,1,"1 assertion(s) failed.: tests/__grading_helpers.c:210: Block 0x55f953a7d630 has wrong block_size (got 508, expected 512)"
+sf_memsuite_grading/malloc_free_coalesce_upper,1,1,
+sf_memsuite_grading/malloc_free_first_block,1,1,
+sf_memsuite_grading/malloc_free_last_block,1,1,
+sf_memsuite_grading/malloc_free_lifo,1,1,
+sf_memsuite_grading/malloc_free_no_coalesce,1,1,
+sf_memsuite_grading/malloc_to_exhaustion,0,1,
+sf_memsuite_grading/malloc_with_splinter,1,1,
+sf_memsuite_grading/realloc_larger,1,1,
+sf_memsuite_grading/realloc_same,1,1,
+sf_memsuite_grading/realloc_size_0,0,1,1 assertion(s) failed.: tests/__grading_helpers.c:230: Payload pointer should be NULL
+sf_memsuite_grading/realloc_smaller,1,1,
+sf_memsuite_grading/realloc_splinter,1,1,
+sf_memsuite_grading/sf_memalign_test_1,0,1,1 assertion(s) failed.: tests/grading_tests_p1.c:463: sf_memalign didn't return NULL when passed a size of 0
+sf_memsuite_grading/sf_memalign_test_2,1,1,
+sf_memsuite_grading/sf_memalign_test_3,1,1,
+sf_memsuite_grading/single_malloc_1,1,1,
+sf_memsuite_grading/single_malloc_12000,1,1,
+sf_memsuite_grading/single_malloc_16,1,1,
+sf_memsuite_grading/single_malloc_32,1,1,
+sf_memsuite_grading/single_malloc_4,1,1,
+sf_memsuite_grading/single_malloc_4024,1,1,
+sf_memsuite_grading/single_malloc_4040,1,1,
+sf_memsuite_grading/single_malloc_8,1,1,
+sf_memsuite_grading/single_malloc_max,1,1,
+sf_memsuite_grading/stress_test,0,1,
+sf_memsuite_student/free_coalesce,1,1,
+sf_memsuite_student/free_no_coalesce,1,1,
+sf_memsuite_student/free_quick,1,1,
+sf_memsuite_student/freelist,1,1,
+sf_memsuite_student/malloc_an_int,1,1,
+sf_memsuite_student/malloc_three_pages,1,1,
+sf_memsuite_student/malloc_too_large,1,1,
+sf_memsuite_student/realloc_larger_block,1,1,
+sf_memsuite_student/realloc_smaller_block_free_block,1,1,
+sf_memsuite_student/realloc_smaller_block_splinter,1,1,
+total,37,42extra_test1,0.6,0.6
+extra_test2,0.6,0.6
+extra_test3,0.6,0.6
+extra_test4,0.6,0.6
+extra_test5,0.6,0.6
