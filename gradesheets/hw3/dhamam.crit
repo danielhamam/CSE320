@@ -1,0 +1,95 @@
+[----] Criterion v2.3.2
+[====] Running 32 tests from sf_memsuite_grading:
+[RUN ] sf_memsuite_grading::free_block_too_small
+[RUN ] sf_memsuite_grading::free_null
+[RUN ] sf_memsuite_grading::free_prev_alloc
+[RUN ] sf_memsuite_grading::free_unallocated
+[PASS] sf_memsuite_grading::free_unallocated: (0.00s)
+[RUN ] sf_memsuite_grading::initialization
+[PASS] sf_memsuite_grading::initialization: (0.00s)
+[RUN ] sf_memsuite_grading::malloc_free_coalesce_both
+[PASS] sf_memsuite_grading::malloc_free_coalesce_both: (0.00s)
+[RUN ] sf_memsuite_grading::malloc_free_coalesce_lower
+[----] tests/__grading_helpers.c:210: Assertion failed: Block 0x55f953a7d630 has wrong block_size (got 508, expected 512)
+[FAIL] sf_memsuite_grading::malloc_free_coalesce_lower: (0.00s)
+[RUN ] sf_memsuite_grading::malloc_free_coalesce_upper
+[PASS] sf_memsuite_grading::malloc_free_coalesce_upper: (0.00s)
+[RUN ] sf_memsuite_grading::malloc_free_first_block
+[PASS] sf_memsuite_grading::malloc_free_first_block: (0.00s)
+[RUN ] sf_memsuite_grading::malloc_free_last_block
+[PASS] sf_memsuite_grading::malloc_free_last_block: (0.00s)
+[RUN ] sf_memsuite_grading::malloc_free_lifo
+[PASS] sf_memsuite_grading::malloc_free_lifo: (0.00s)
+[RUN ] sf_memsuite_grading::malloc_free_no_coalesce
+[PASS] sf_memsuite_grading::malloc_free_no_coalesce: (0.00s)
+[RUN ] sf_memsuite_grading::malloc_to_exhaustion
+[PASS] sf_memsuite_grading::free_block_too_small: (0.00s)
+[RUN ] sf_memsuite_grading::malloc_with_splinter
+sz: 3904
+[PASS] sf_memsuite_grading::malloc_with_splinter: (0.00s)
+[RUN ] sf_memsuite_grading::realloc_larger
+[PASS] sf_memsuite_grading::realloc_larger: (0.00s)
+[RUN ] sf_memsuite_grading::realloc_same
+[PASS] sf_memsuite_grading::realloc_same: (0.00s)
+[RUN ] sf_memsuite_grading::realloc_size_0
+[----] tests/__grading_helpers.c:230: Assertion failed: Payload pointer should be NULL
+[FAIL] sf_memsuite_grading::realloc_size_0: (0.00s)
+[RUN ] sf_memsuite_grading::realloc_smaller
+[PASS] sf_memsuite_grading::realloc_smaller: (0.00s)
+[RUN ] sf_memsuite_grading::realloc_splinter
+[PASS] sf_memsuite_grading::realloc_splinter: (0.00s)
+[RUN ] sf_memsuite_grading::sf_memalign_test_1
+[----] tests/grading_tests_p1.c:463: Assertion failed: sf_memalign didn't return NULL when passed a size of 0
+[FAIL] sf_memsuite_grading::sf_memalign_test_1: (0.00s)
+[RUN ] sf_memsuite_grading::sf_memalign_test_2
+[PASS] sf_memsuite_grading::sf_memalign_test_2: (0.00s)
+[RUN ] sf_memsuite_grading::sf_memalign_test_3
+[PASS] sf_memsuite_grading::sf_memalign_test_3: (0.00s)
+[PASS] sf_memsuite_grading::free_null: (0.00s)
+[RUN ] sf_memsuite_grading::single_malloc_1
+[RUN ] sf_memsuite_grading::single_malloc_12000
+[PASS] sf_memsuite_grading::single_malloc_1: (0.00s)
+[PASS] sf_memsuite_grading::single_malloc_12000: (0.00s)
+[RUN ] sf_memsuite_grading::single_malloc_16
+[PASS] sf_memsuite_grading::single_malloc_16: (0.00s)
+[RUN ] sf_memsuite_grading::single_malloc_32
+[PASS] sf_memsuite_grading::single_malloc_32: (0.00s)
+[RUN ] sf_memsuite_grading::single_malloc_4024
+[PASS] sf_memsuite_grading::single_malloc_4024: (0.00s)
+[RUN ] sf_memsuite_grading::single_malloc_4
+[RUN ] sf_memsuite_grading::single_malloc_4040
+[PASS] sf_memsuite_grading::single_malloc_4: (0.00s)
+[PASS] sf_memsuite_grading::single_malloc_4040: (0.00s)
+[RUN ] sf_memsuite_grading::single_malloc_8
+[PASS] sf_memsuite_grading::single_malloc_8: (0.00s)
+[RUN ] sf_memsuite_grading::single_malloc_max
+[RUN ] sf_memsuite_grading::stress_test
+[PASS] sf_memsuite_grading::single_malloc_max: (0.00s)
+[====] Running 10 tests from sf_memsuite_student:
+[RUN ] sf_memsuite_student::free_coalesce
+[PASS] sf_memsuite_student::free_coalesce: (0.00s)
+[RUN ] sf_memsuite_student::free_no_coalesce
+[PASS] sf_memsuite_student::free_no_coalesce: (0.00s)
+[RUN ] sf_memsuite_student::free_quick
+[PASS] sf_memsuite_student::free_quick: (0.00s)
+[PASS] sf_memsuite_grading::free_prev_alloc: (0.00s)
+[RUN ] sf_memsuite_student::freelist
+[RUN ] sf_memsuite_student::malloc_an_int
+[PASS] sf_memsuite_student::freelist: (0.00s)
+[PASS] sf_memsuite_student::malloc_an_int: (0.00s)
+[RUN ] sf_memsuite_student::malloc_three_pages
+[RUN ] sf_memsuite_student::malloc_too_large
+[PASS] sf_memsuite_student::malloc_three_pages: (0.00s)
+[PASS] sf_memsuite_student::malloc_too_large: (0.00s)
+[RUN ] sf_memsuite_student::realloc_larger_block
+[RUN ] sf_memsuite_student::realloc_smaller_block_free_block
+[PASS] sf_memsuite_student::realloc_larger_block: (0.00s)
+[PASS] sf_memsuite_student::realloc_smaller_block_free_block: (0.00s)
+[RUN ] sf_memsuite_student::realloc_smaller_block_splinter
+[PASS] sf_memsuite_student::realloc_smaller_block_splinter: (0.00s)
+[----] tests/grading_tests_p1.c:409: Unexpected signal caught below this line!
+[FAIL] sf_memsuite_grading::malloc_to_exhaustion: CRASH!
+[----] tests/grading_tests_p2.c:229: Unexpected signal caught below this line!
+[FAIL] sf_memsuite_grading::stress_test: CRASH!
+[----] Writing xml report in `crit.xml`.
+[====] Synthesis: Tested: 42 | Passing: 37 | Failing: 5 | Crashing: 2 
