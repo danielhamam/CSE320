@@ -32,17 +32,19 @@ int worker(void) {
     // Main (infinity) loop for reading from master process: (continues till SIGTERM)
     while (1) {
         kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
+        // kill(getppid(), 17); // Send SIGCHLD to parent?
         struct problem *targetProblem = readProblem(stdin);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
-        // debug("MADE IT HERE");
+        debug("Found targetMethod");
         struct result *targetRESULT = targetMethod.solve(targetProblem,CHECK_FLAG);
+        debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
         // free what you malloced
         free(targetProblem);
         free(targetRESULT); // malloced in solver, so free now
     }
 
-    return EXIT_FAILURE;
+    return EXIT_SUCCESS;
 }
 
 // ------------------------------------------------------------------------------
@@ -58,27 +60,36 @@ int worker(void) {
 // TAKES NOTHING, RETURNS READ PROBLEM
 struct problem *readProblem(FILE *stream) {
     debug("Reading the new problem");
+
     // Initialize new pointer for problem
-    struct problem *read_problem = malloc(sizeof(*read_problem));
+    struct problem *read_problem_temp = (struct problem *) malloc(sizeof(struct problem));
 
     // Go byte by byte and read the problem
 
     // First, read the size variable
     int count_size = 0;
-    int tempSize = 0;
+    unsigned int tempSize = 0;
     while (count_size < sizeof(size_t)) {
-        int byte = fgetc(stream);
+        unsigned int byte = fgetc(stream);
         if (byte == EOF) exit(EXIT_FAILURE);
         tempSize += byte;
         count_size++;
     }
+    read_problem_temp->size = (size_t) tempSize;
+
+    // --------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------
+
+    // Re-allocate to the right size
+
+    struct problem *read_problem = (struct problem *) realloc(read_problem_temp, read_problem_temp->size);
     read_problem->size = (size_t) tempSize;
 
     // Second, read the short type variable
     int count_type = 0;
-    int tempType = 0;
+    unsigned int tempType = 0;
     while(count_type < sizeof(short)) {
-        int byte = fgetc(stream);
+        unsigned int byte = fgetc(stream);
         if (byte == EOF) exit(EXIT_FAILURE);
         tempType += byte;
         count_type++;
@@ -87,9 +98,9 @@ struct problem *readProblem(FILE *stream) {
 
     // Third, read the short ID variable
     int count_ID = 0;
-    int tempID = 0;
+    unsigned int tempID = 0;
     while (count_ID < sizeof(short)) {
-        int byte = fgetc(stream);
+        unsigned int byte = fgetc(stream);
         if (byte == EOF) exit(EXIT_FAILURE);
         tempID += byte;
         count_ID++;
@@ -98,9 +109,9 @@ struct problem *readProblem(FILE *stream) {
 
     // Fourth, read the short nvars variable
     int count_nvars = 0;
-    int tempNVARS = 0;
+    unsigned int tempNVARS = 0;
     while (count_nvars < sizeof(short)) {
-        int byte = fgetc(stream);
+        unsigned int byte = fgetc(stream);
         if (byte == EOF) exit(EXIT_FAILURE);
         tempNVARS += byte;
         count_nvars++;
@@ -109,9 +120,9 @@ struct problem *readProblem(FILE *stream) {
 
     // Fifth, read the short var variable
     int count_var = 0;
-    int tempVar = 0;
+    unsigned int tempVar = 0;
     while (count_var < sizeof(short)) {
-        int byte = fgetc(stream);
+        unsigned int byte = fgetc(stream);
         if (byte == EOF) exit(EXIT_FAILURE);
         tempVar += byte;
         count_var++;
@@ -119,14 +130,27 @@ struct problem *readProblem(FILE *stream) {
     read_problem->var = (short) tempVar;
 
     // Sixth, read the char padding[0] variable
+    // void *array1 = malloc(sizeof(char *));
+    // memcpy(read_problem->padding, array1, (size_t) sizeof(char *));
+
     // Seventh, read the char data[0] variable
-    int sizeArrays = (int) (read_problem->size) - sizeof(struct problem);
+    int sizeData = (int) (read_problem->size) - sizeof(struct problem);
 
-    char *array = (char *) malloc(sizeArrays); // We allocated for the amount of padding/data
-    memcpy(read_problem->data, &array, sizeArrays); // Copy from the array we made to the read_problem->data)
+    void *array2 = malloc(sizeData);
+    memcpy(read_problem->data, array2, (size_t) sizeData); // Copy from the array we made to the read_problem->data)
+    free(array2);
 
-    debug("read_problem->id %d ", (int) read_problem->id);
-    debug("read_problem->type %d ", (int) read_problem->type);
+    // We malloced space for the data, so now actually read it
+    // Char pointer points to beginning of data section
+    int countData = 0;
+    char *tempData = read_problem->data;
+    while (countData < sizeData) {
+        unsigned int byte = fgetc(stream);
+        if (byte == EOF) exit(EXIT_FAILURE);
+        *tempData = byte; // store char in this position
+        countData++;
+        tempData++;
+    }
 
     return read_problem;
 }
@@ -135,11 +159,9 @@ struct problem *readProblem(FILE *stream) {
 void writeResult(struct result *selectedResult, FILE *out) {
 
     debug("Writing the result from the worker process");
-    // debug("RESULT SIZE --> %d ", (int) selectedResult->size);
-    // debug("ID: %d ", selectedResult->id);
-    // debug("FAILED: %d ", selectedResult->failed);
 
     char *charPtr = (char *) selectedResult;
+    if (charPtr == NULL) return exit(EXIT_FAILURE);
     int countPtr = 0;
     while (countPtr < sizeof(*selectedResult)) {
         fputc(*charPtr, out);
