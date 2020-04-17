@@ -17,7 +17,7 @@ void SIGTERM_handler();
 void SIGCONT_handler();
 struct problem *readProblem();
 void writeResult(struct result *selectedResult, FILE *out);
-volatile sig_atomic_t CHECK_FLAG = 0; // Normal Function
+volatile sig_atomic_t CHECK_FLAG; // Normal Function
 // ---------------------------------------------------------------
 
 int worker(void) {
@@ -35,7 +35,6 @@ int worker(void) {
     // Main (infinity) loop for reading from master process: (continues till SIGTERM)
     while (1) {
         kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
-        // kill(getppid(), 17); // Send SIGCHLD to parent?
 
 // ------------------------------------------------------------
         // sigsuspend(&newMask); // waiting for the SIGCONT signal
@@ -46,8 +45,8 @@ int worker(void) {
         debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
         // free what you malloced
-        // free(targetProblem);
-        // free(targetRESULT); // malloced in solver, so free now
+        free(targetProblem);
+        free(targetRESULT); // malloced in solver, so free now
 // ------------------------------------------------------------
 
     }
@@ -165,6 +164,8 @@ struct problem *readProblem(FILE *stream) {
     debug("Problem: size: %ld, type: %d, id: %d, nvars: %d, var :%d ", read_problem->size, read_problem->type, read_problem->id, read_problem->nvars, read_problem->var);
     debug("Problem data: %s ", read_problem->data);
 
+    fflush(stdin);
+
     return read_problem;
 }
 
@@ -173,15 +174,17 @@ void writeResult(struct result *selectedResult, FILE *out) {
 
     debug("Writing the result from the worker process");
 
+    // Doesn't include DATA
     char *charPtr = (char *) selectedResult;
     if (charPtr == NULL) return exit(EXIT_FAILURE);
     int countPtr = 0;
-    while (countPtr < sizeof(*selectedResult)) {
+    while (*charPtr != EOF) {
         if (*charPtr == EOF) return exit(EXIT_FAILURE);
         fputc(*charPtr, out);
         charPtr++;
         countPtr++;
     }
+
     fflush(out);
 }
 
@@ -200,7 +203,7 @@ void SIGTERM_handler(void) {
 
 void SIGCONT_handler(void) {
     debug("SIGCONT Handler invoked");
-    // *CHECK_FLAG = 0; // reset CHECK_FLAG
+    CHECK_FLAG = 0; // reset CHECK_FLAG
     kill(getpid(), 18); // send itself continue signal
 
 }
