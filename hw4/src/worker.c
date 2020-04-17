@@ -10,38 +10,46 @@
  * (See polya.h for specification.)
  */
 
+// ---------------------------------------------------------------
 // Signal Handlers, don't do anything "compilicated"
-void stop_itself(); // fort worker process to stop itself
 void SIGHUP_handler();
 void SIGTERM_handler();
 void SIGCONT_handler();
-
 struct problem *readProblem();
 void writeResult(struct result *selectedResult, FILE *out);
-
-volatile sig_atomic_t *CHECK_FLAG = 0; // 0 = Normal Function
-int flag_succeeded = 0; // 1 for success (for SIGHUP)
+volatile sig_atomic_t CHECK_FLAG = 0; // Normal Function
+// ---------------------------------------------------------------
 
 int worker(void) {
     // Work on this first and use demo/polya for testing.
 
-    // So-called initialiation
+    // So-called initialization
     signal(SIGHUP, SIGHUP_handler);
     signal(SIGTERM, SIGTERM_handler);
+    // signal(SIGCONT, SIGCONT_handler);
+    // sigset_t newMask;
+    // Blocking SIGTERM..............
+    // sigfillset(&newMask);
+    // sigdelset(&newMask, SIGCONT);
 
     // Main (infinity) loop for reading from master process: (continues till SIGTERM)
     while (1) {
         kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
         // kill(getppid(), 17); // Send SIGCHLD to parent?
+
+// ------------------------------------------------------------
+        // sigsuspend(&newMask); // waiting for the SIGCONT signal
         struct problem *targetProblem = readProblem(stdin);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
         debug("Found targetMethod");
-        struct result *targetRESULT = targetMethod.solve(targetProblem,CHECK_FLAG);
+        struct result *targetRESULT = targetMethod.solve(targetProblem, &CHECK_FLAG);
         debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
         // free what you malloced
-        free(targetProblem);
-        free(targetRESULT); // malloced in solver, so free now
+        // free(targetProblem);
+        // free(targetRESULT); // malloced in solver, so free now
+// ------------------------------------------------------------
+
     }
 
     return EXIT_SUCCESS;
@@ -57,7 +65,7 @@ int worker(void) {
 
 
 /* READING THE PROBLEM FROM INPUT STREAM*/
-// TAKES NOTHING, RETURNS READ PROBLEM
+// TAKES NOTHING, RETURNS READ PROBLE
 struct problem *readProblem(FILE *stream) {
     debug("Reading the new problem");
 
@@ -67,7 +75,7 @@ struct problem *readProblem(FILE *stream) {
     // Go byte by byte and read the problem
 
     // First, read the size variable
-    int count_size = 0;
+    size_t count_size = 0;
     unsigned int tempSize = 0;
     while (count_size < sizeof(size_t)) {
         unsigned int byte = fgetc(stream);
@@ -75,14 +83,13 @@ struct problem *readProblem(FILE *stream) {
         tempSize += byte;
         count_size++;
     }
-    read_problem_temp->size = (size_t) tempSize;
 
     // --------------------------------------------------------------------------------------------------------
     // --------------------------------------------------------------------------------------------------------
 
     // Re-allocate to the right size
 
-    struct problem *read_problem = (struct problem *) realloc(read_problem_temp, read_problem_temp->size);
+    struct problem *read_problem = (struct problem *) realloc(read_problem_temp, tempSize);
     read_problem->size = (size_t) tempSize;
 
     // Second, read the short type variable
@@ -132,6 +139,8 @@ struct problem *readProblem(FILE *stream) {
     // Sixth, read the char padding[0] variable
     // void *array1 = malloc(sizeof(char *));
     // memcpy(read_problem->padding, array1, (size_t) sizeof(char *));
+    // char *tempPadding = read_problem->data;
+    // *tempPadding = (int) fgetc(stream);
 
     // Seventh, read the char data[0] variable
     int sizeData = (int) (read_problem->size) - sizeof(struct problem);
@@ -146,11 +155,15 @@ struct problem *readProblem(FILE *stream) {
     char *tempData = read_problem->data;
     while (countData < sizeData) {
         unsigned int byte = fgetc(stream);
+        // debug("BYTE: %d ",byte );
         if (byte == EOF) exit(EXIT_FAILURE);
         *tempData = byte; // store char in this position
         countData++;
         tempData++;
     }
+
+    debug("Problem: size: %ld, type: %d, id: %d, nvars: %d, var :%d ", read_problem->size, read_problem->type, read_problem->id, read_problem->nvars, read_problem->var);
+    debug("Problem data: %s ", read_problem->data);
 
     return read_problem;
 }
@@ -164,27 +177,30 @@ void writeResult(struct result *selectedResult, FILE *out) {
     if (charPtr == NULL) return exit(EXIT_FAILURE);
     int countPtr = 0;
     while (countPtr < sizeof(*selectedResult)) {
+        if (*charPtr == EOF) return exit(EXIT_FAILURE);
         fputc(*charPtr, out);
         charPtr++;
         countPtr++;
     }
-
     fflush(out);
 }
-
-void stop_itself(void) {}
 
 void SIGHUP_handler(void) {
     // Write result to pipe (might or might not be "failed") --> check if already succeeded
     // cancel its current solution attempt
-    *CHECK_FLAG = 1;
+    CHECK_FLAG = 1;
     debug("SIGHUP Handler invoked");
-
-    kill(getpid(), 19); // SEND ITSELF SIGSTOP
 }
 
 void SIGTERM_handler(void) {
     // Graceful termination of worker, use exit()
-    debug("SIGTERM_handler invoked");
+    debug("SIGTERM Handler invoked");
     exit(EXIT_SUCCESS);
+}
+
+void SIGCONT_handler(void) {
+    debug("SIGCONT Handler invoked");
+    // *CHECK_FLAG = 0; // reset CHECK_FLAG
+    kill(getpid(), 18); // send itself continue signal
+
 }
