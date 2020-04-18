@@ -17,7 +17,7 @@ void SIGTERM_handler();
 void SIGCONT_handler();
 struct problem *readProblem();
 void writeResult(struct result *selectedResult, FILE *out);
-volatile sig_atomic_t CHECK_FLAG; // Normal Function
+volatile sig_atomic_t CHECK_FLAG = 0; // Normal Function
 // ---------------------------------------------------------------
 
 int worker(void) {
@@ -26,29 +26,27 @@ int worker(void) {
     // So-called initialization
     signal(SIGHUP, SIGHUP_handler);
     signal(SIGTERM, SIGTERM_handler);
-    // signal(SIGCONT, SIGCONT_handler);
     // sigset_t newMask;
     // Blocking SIGTERM..............
     // sigfillset(&newMask);
-    // sigdelset(&newMask, SIGCONT);
+    // sigdelset(&newMask, SIGTERM);
 
     // Main (infinity) loop for reading from master process: (continues till SIGTERM)
     while (1) {
         kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
-
 // ------------------------------------------------------------
-        // sigsuspend(&newMask); // waiting for the SIGCONT signal
         struct problem *targetProblem = readProblem(stdin);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
         debug("Found targetMethod");
         struct result *targetRESULT = targetMethod.solve(targetProblem, &CHECK_FLAG);
         debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
+        CHECK_FLAG = 0;
         // free what you malloced
         free(targetProblem);
         free(targetRESULT); // malloced in solver, so free now
 // ------------------------------------------------------------
-
+        // sigsuspend(&newMask); // waiting for the SIGTERM signal
     }
 
     return EXIT_SUCCESS;
@@ -70,6 +68,7 @@ struct problem *readProblem(FILE *stream) {
 
     // Initialize new pointer for problem
     struct problem *read_problem_temp = (struct problem *) malloc(sizeof(struct problem));
+    if (read_problem_temp == NULL) exit(EXIT_FAILURE);
 
     // Go byte by byte and read the problem
 
@@ -135,16 +134,11 @@ struct problem *readProblem(FILE *stream) {
     }
     read_problem->var = (short) tempVar;
 
-    // Sixth, read the char padding[0] variable
-    // void *array1 = malloc(sizeof(char *));
-    // memcpy(read_problem->padding, array1, (size_t) sizeof(char *));
-    // char *tempPadding = read_problem->data;
-    // *tempPadding = (int) fgetc(stream);
-
-    // Seventh, read the char data[0] variable
+    // Sixth, read the char data[0] variable
     int sizeData = (int) (read_problem->size) - sizeof(struct problem);
 
     void *array2 = malloc(sizeData);
+    if (array2 == NULL) EXIT_FAILURE;
     memcpy(read_problem->data, array2, (size_t) sizeData); // Copy from the array we made to the read_problem->data)
     free(array2);
 
@@ -162,9 +156,9 @@ struct problem *readProblem(FILE *stream) {
     }
 
     debug("Problem: size: %ld, type: %d, id: %d, nvars: %d, var :%d ", read_problem->size, read_problem->type, read_problem->id, read_problem->nvars, read_problem->var);
-    debug("Problem data: %s ", read_problem->data);
+    // debug("Problem data: %s ", read_problem->data);
 
-    fflush(stdin);
+    // fflush(stream);
 
     return read_problem;
 }
@@ -172,13 +166,15 @@ struct problem *readProblem(FILE *stream) {
 /* WRITING THE PROBLEM TO OUTPUT STREAM*/
 void writeResult(struct result *selectedResult, FILE *out) {
 
+    debug("Result: size: %ld, id: %d, failed: %d ", selectedResult->size, selectedResult->id, (int) selectedResult->failed);
     debug("Writing the result from the worker process");
 
     // Doesn't include DATA
     char *charPtr = (char *) selectedResult;
     if (charPtr == NULL) return exit(EXIT_FAILURE);
     int countPtr = 0;
-    while (*charPtr != EOF) {
+    int overallSize = selectedResult->size;
+    while (countPtr != overallSize) {
         if (*charPtr == EOF) return exit(EXIT_FAILURE);
         fputc(*charPtr, out);
         charPtr++;
@@ -199,11 +195,4 @@ void SIGTERM_handler(void) {
     // Graceful termination of worker, use exit()
     debug("SIGTERM Handler invoked");
     exit(EXIT_SUCCESS);
-}
-
-void SIGCONT_handler(void) {
-    debug("SIGCONT Handler invoked");
-    CHECK_FLAG = 0; // reset CHECK_FLAG
-    kill(getpid(), 18); // send itself continue signal
-
 }
