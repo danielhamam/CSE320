@@ -16,8 +16,10 @@ void SIGHUP_handler();
 void SIGTERM_handler();
 void SIGCONT_handler();
 struct problem *readProblem();
+struct result *create_failedResult();
 void writeResult(struct result *selectedResult, FILE *out);
-volatile sig_atomic_t CHECK_FLAG = 0; // Normal Function
+volatile sig_atomic_t CHECK_FLAG = 0; // Normal Function, default runs well
+volatile sig_atomic_t SIGHUP_CALL = 0; // Normal Function, default runs well
 // ---------------------------------------------------------------
 
 int worker(void) {
@@ -33,15 +35,21 @@ int worker(void) {
 
     // Main (infinity) loop for reading from master process: (continues till SIGTERM)
     while (1) {
+        CHECK_FLAG = 0;
+        SIGHUP_CALL = 0;
         kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
 // ------------------------------------------------------------
         struct problem *targetProblem = readProblem(stdin);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
         debug("Found targetMethod");
-        struct result *targetRESULT = targetMethod.solve(targetProblem, &CHECK_FLAG);
+        struct result *targetRESULT;
+        if (SIGHUP_CALL == 1) targetRESULT = create_failedResult();
+        else {
+            targetRESULT = targetMethod.solve(targetProblem, &CHECK_FLAG);
+            if (SIGHUP_CALL == 1) { if (targetRESULT != NULL) targetRESULT->failed = 1; }
+        }
         debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
-        CHECK_FLAG = 0;
         // free what you malloced
         free(targetProblem);
         free(targetRESULT); // malloced in solver, so free now
@@ -156,9 +164,8 @@ struct problem *readProblem(FILE *stream) {
     }
 
     debug("Problem: size: %ld, type: %d, id: %d, nvars: %d, var :%d ", read_problem->size, read_problem->type, read_problem->id, read_problem->nvars, read_problem->var);
-    // debug("Problem data: %s ", read_problem->data);
 
-    // fflush(stream);
+    fflush(stream);
 
     return read_problem;
 }
@@ -169,16 +176,29 @@ void writeResult(struct result *selectedResult, FILE *out) {
     debug("Result: size: %ld, id: %d, failed: %d ", selectedResult->size, selectedResult->id, (int) selectedResult->failed);
     debug("Writing the result from the worker process");
 
+    if (selectedResult->size == 0) {
+        char *charPtr = (char * ) selectedResult;
+        int countPtr = 0;
+        int countHead = sizeof(struct result);
+        while (countPtr != countHead) {
+            fputc(*charPtr, out);
+            charPtr++;
+            countPtr++;
+        }
+        fflush(out);
+        return;
+    }
+
     // Doesn't include DATA
-    char *charPtr = (char *) selectedResult;
-    if (charPtr == NULL) return exit(EXIT_FAILURE);
-    int countPtr = 0;
+    char *charPtr2 = (char *) selectedResult;
+    if (charPtr2 == NULL) return exit(EXIT_FAILURE);
+    int countPtr2 = 0;
     int overallSize = selectedResult->size;
-    while (countPtr != overallSize) {
-        if (*charPtr == EOF) return exit(EXIT_FAILURE);
-        fputc(*charPtr, out);
-        charPtr++;
-        countPtr++;
+    while (countPtr2 != overallSize) {
+        if (*charPtr2 == EOF) return exit(EXIT_FAILURE);
+        fputc(*charPtr2, out);
+        charPtr2++;
+        countPtr2++;
     }
 
     fflush(out);
@@ -187,7 +207,7 @@ void writeResult(struct result *selectedResult, FILE *out) {
 void SIGHUP_handler(void) {
     // Write result to pipe (might or might not be "failed") --> check if already succeeded
     // cancel its current solution attempt
-    CHECK_FLAG = 1;
+    SIGHUP_CALL = 1;
     debug("SIGHUP Handler invoked");
 }
 
@@ -195,4 +215,19 @@ void SIGTERM_handler(void) {
     // Graceful termination of worker, use exit()
     debug("SIGTERM Handler invoked");
     exit(EXIT_SUCCESS);
+}
+
+struct result *create_failedResult(void) {
+
+    struct result *targetRESULT = malloc(sizeof(struct result));
+    targetRESULT->size = 0;
+    targetRESULT->id = 0;
+    targetRESULT->failed = 1; // Solution Cancelled
+    targetRESULT->padding[0] = 0;
+    targetRESULT->padding[1] = 0;
+    targetRESULT->padding[2] = 0;
+    targetRESULT->padding[3] = 0;
+    targetRESULT->padding[4] = 0;
+    targetRESULT->data[0] = 0;
+    return targetRESULT;
 }
