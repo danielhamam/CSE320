@@ -17,24 +17,24 @@ int master(int workers) {
 // ------------------------------------------------------------------------
     pid_t arrayPID[workers]; // i dont think you have to malloc because only exist in this code block
 
-    // int file_descriptors[workers * 2]; // ARRAY --> MASTER TO WORKER SEND (PIPE DESCRIPTORS)
-    // int pipe1, pipe2; // to temp. hold file descriptors
+    int masterToworker_pipes[workers][2]; // ARRAY (PIPE DESCRIPTORS), MASTER SENDS TO WORKER
+    int workerTomaster_pipes[workers][2]; // ARRAY (PIPE DESCRIPTORS), WORKER SENDS TO MASTER
 
     int count = 0;
     pid_t tempPID;
     while (count < workers) {
-        // if ( pipe(file_descriptors[count]) == -1) exit(EXIT_FAILURE);
-        // if ( pipe(pipefd) == -1) exit(EXIT_FAILURE);
 
         tempPID = fork();
-
         if (tempPID == -1) exit(EXIT_FAILURE);
         else if (tempPID == 0) {
             arrayPID[count] = getpid(); // When PID == 0, it is child process (are we assuming the worker processes are running? Sent SIGSTOP)
 
+            if (pipe(masterToworker_pipes[count]) == -1) exit(EXIT_FAILURE);
+            if (pipe(workerTomaster_pipes[count]) == -1) exit(EXIT_FAILURE);
+
             // Redirect standard input/output to pipes
-            // dup2(pipe1, 0);
-            // dup2(pipe2, 1);
+            dup2(masterToworker_pipes[count][0], 0); // move pipe into stdin
+            dup2(workerTomaster_pipes[count][1], 1); // move pipe into stdout
         }
 
         count++;

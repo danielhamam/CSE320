@@ -19,7 +19,7 @@ struct problem *readProblem();
 struct result *create_failedResult();
 void writeResult(struct result *selectedResult, FILE *out);
 volatile sig_atomic_t CHECK_FLAG = 0; // Normal Function, default runs well
-volatile sig_atomic_t SIGHUP_CALL = 0; // Normal Function, default runs well
+volatile sig_atomic_t SIGHUP_CANCELLED = 0; // Normal Function, default runs well
 // ---------------------------------------------------------------
 
 int worker(void) {
@@ -36,18 +36,19 @@ int worker(void) {
     // Main (infinity) loop for reading from master process: (continues till SIGTERM)
     while (1) {
         CHECK_FLAG = 0;
-        SIGHUP_CALL = 0;
-        kill(getpid(), 19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
+        SIGHUP_CANCELLED = 0;
+        raise(19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
 // ------------------------------------------------------------
         struct problem *targetProblem = readProblem(stdin);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
         debug("Found targetMethod");
         struct result *targetRESULT;
-        if (SIGHUP_CALL == 1) targetRESULT = create_failedResult();
+        if (CHECK_FLAG == 1) targetRESULT = create_failedResult();
         else {
             targetRESULT = targetMethod.solve(targetProblem, &CHECK_FLAG);
-            if (SIGHUP_CALL == 1) { if (targetRESULT != NULL) targetRESULT->failed = 1; }
+            if (targetRESULT == NULL) { targetRESULT = create_failedResult(); }
         }
+        SIGHUP_CANCELLED = 1; // can't change CHECK_FLAG from 1
         debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
         // free what you malloced
@@ -176,7 +177,7 @@ void writeResult(struct result *selectedResult, FILE *out) {
     debug("Result: size: %ld, id: %d, failed: %d ", selectedResult->size, selectedResult->id, (int) selectedResult->failed);
     debug("Writing the result from the worker process");
 
-    if (selectedResult->size == 0) {
+    if (CHECK_FLAG == 1) {
         char *charPtr = (char * ) selectedResult;
         int countPtr = 0;
         int countHead = sizeof(struct result);
@@ -207,7 +208,8 @@ void writeResult(struct result *selectedResult, FILE *out) {
 void SIGHUP_handler(void) {
     // Write result to pipe (might or might not be "failed") --> check if already succeeded
     // cancel its current solution attempt
-    SIGHUP_CALL = 1;
+    // SIGHUP_CAL = 1;
+    if (!SIGHUP_CANCELLED) CHECK_FLAG = 1;
     debug("SIGHUP Handler invoked");
 }
 
@@ -220,7 +222,7 @@ void SIGTERM_handler(void) {
 struct result *create_failedResult(void) {
 
     struct result *targetRESULT = malloc(sizeof(struct result));
-    targetRESULT->size = 0;
+    targetRESULT->size = (size_t) sizeof(struct result);
     targetRESULT->id = 0;
     targetRESULT->failed = 1; // Solution Cancelled
     targetRESULT->padding[0] = 0;
