@@ -22,6 +22,9 @@ int master(int workers) {
 //                           INITIALIZE THE PROGRAM
 // ------------------------------------------------------------------------
 
+    // Redirect standard input/output to pipes ( pipe[0] = read end of the pipe, pipe[1] = write end of the pipe )
+    // In unistd.h, 0 is file descriptor for standard input, 1 for standard output, 2 standard error output
+
     statesWorkers = malloc(sizeof(sig_atomic_t) * workers);
     pid_t arrayPID[workers]; // i dont think you have to malloc because only exist in this code block
 
@@ -33,16 +36,11 @@ int master(int workers) {
     while (count < workers) {
         if (pipe(masterToworker_pipes[count]) == -1) exit(EXIT_FAILURE);
         if (pipe(workerTomaster_pipes[count]) == -1) exit(EXIT_FAILURE);
-
-        // CLOSING FILE DESCRIPTORS IN THE PARENT
-        // Redirect standard input/output to pipes ( pipe[0] = read end of the pipe, pipe[1] = write end of the pipe )
-        // In unistd.h, 0 is file descriptor for standard input, 1 for standard output, 2 standard error output
-
         count++;
     }
 
-    // ---------------------------------------------------------------------------------
-    // ---------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------
 
     // NOW, LET'S FORK INTO THE CHILD PROCESSES
 
@@ -64,6 +62,9 @@ int master(int workers) {
             // redirect to standard in/out
             dup2(masterToworker_pipes[count][1],0); // child reads from M2W, make it stdin (WRITING END)
             dup2(workerTomaster_pipes[count][0],1); // child writes to W2M, make it stdout (READING END)
+
+            // execute the worker program
+            execl("bin/polya_worker", "bin/polya_worker", NULL);
 
         } // end of worker process running, would stop with SIGSTOP in worker
         else {
