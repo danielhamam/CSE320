@@ -13,19 +13,20 @@
 struct problem *generateProblem();
 void writeProblem(struct problem *problem, FILE *stream);
 
-volatile sig_atomic_t *statesWorkers; // to hold workers' states
+volatile sig_atomic_t *statesWorkers = 0; // to hold workers' states
 
 int master(int workers) {
 
     sf_start();
 
+// ---------------------------------------------------------------------------------------------------------------------------
 //                           INITIALIZE THE PROGRAM
-// ------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------------
 
     // Redirect standard input/output to pipes ( pipe[0] = read end of the pipe, pipe[1] = write end of the pipe )
     // In unistd.h, 0 is file descriptor for standard input, 1 for standard output, 2 standard error output
 
-    statesWorkers = malloc(sizeof(sig_atomic_t) * workers);
+    statesWorkers = malloc(workers * sizeof(sig_atomic_t));
     pid_t arrayPID[workers]; // i dont think you have to malloc because only exist in this code block
 
     int masterToworker_pipes[workers][2]; // ARRAY (PIPE DESCRIPTORS), MASTER SENDS TO WORKER
@@ -39,8 +40,8 @@ int master(int workers) {
         count++;
     }
 
-// ---------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------------
 
     // NOW, LET'S FORK INTO THE CHILD PROCESSES
 
@@ -67,16 +68,26 @@ int master(int workers) {
             execl("bin/polya_worker", "bin/polya_worker", NULL);
 
         } // end of worker process running, would stop with SIGSTOP in worker
-        else {
+        else { // parent process
             close(masterToworker_pipes[count][0]); // parent writes to M2W, close read end
             close(workerTomaster_pipes[count][1]); // parent reads from W2M, close write end
         }
         count++;
     } // end of while loop
 
-// ------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------------
 
-// REPEATEDLY ASSIGNING PROBLEMS TO IDLE WORKERS AND POSTS RESULTS RECEIVED FROM WORKERS ( ithink at this point, all workers should be idle )
+// REPEATEDLY ASSIGNING PROBLEMS TO IDLE WORKERS AND POSTS RESULTS RECEIVED FROM WORKERS ( i think at this point, all workers should be idle )
+    while (1) {
+
+        // for loop to search for idle worker, find a problem and send to worker
+        for (int c = 0; c < workers; c++) {
+            pid_t pid = arrayPID[c];
+
+        }
+
+    }
 
     // first, get the problem
 
