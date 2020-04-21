@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <string.h>
 
 #include "debug.h"
 #include "polya.h"
@@ -11,7 +12,8 @@
  */
 
 struct problem *generateProblem();
-void writeProblem(struct problem *problem, FILE *stream);
+void writeProblem(struct problem *problem, FILE *in);
+struct result *readResult(FILE *out);
 
 volatile sig_atomic_t *statesWorkers = 0; // to hold workers' states
 
@@ -99,7 +101,10 @@ int master(int workers) {
         // Get the problem, and write to worker
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
         FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
+        kill(targetWorker, SIGCONT); // send worker the continue signal
         writeProblem(targetProblem, fileInput);
+
+        // When SIGCHLD received
 
 
     }
@@ -123,5 +128,63 @@ void writeProblem(struct problem *selectedProblem, FILE *in) {
         charPtr++;
         countPtr++;
     }
-
 }
+
+struct result *readResult(FILE *out) {
+
+    // First, read the SIZE variable (know how much to malloc)
+    size_t count_size = 0;
+    unsigned int tempSize = 0;
+    while (count_size < sizeof(size_t)) {
+        unsigned int byte = fgetc(out);
+        if (byte == EOF) exit(EXIT_FAILURE);
+        tempSize += byte;
+        count_size++;
+    }
+
+    // --------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------
+
+    // Now we can malloc to the right size
+
+    struct result *targetResult = (struct result *) malloc(tempSize);
+    targetResult->size = (size_t) tempSize;
+
+    // Second, read the short ID variable
+    int count_ID = 0;
+    unsigned int tempID = 0;
+    while (count_ID < sizeof(short)) {
+        unsigned int byte = fgetc(out);
+        if (byte == EOF) exit(EXIT_FAILURE);
+        tempID += byte;
+        count_ID++;
+    }
+    targetResult->id = (short) tempID;
+
+    // Third, read the char failed variable
+    unsigned int tempFailed = fgetc(out);
+    targetResult->failed = tempFailed;
+
+    // Fourth, read the data section
+    int sizeData = (int) (targetResult->size) - sizeof(struct result);
+
+    void *array2 = malloc(sizeData);
+    if (array2 == NULL) EXIT_FAILURE;
+    memcpy(targetResult->data, array2, (size_t) sizeData); // Copy from the array we made to the read_problem->data)
+    free(array2);
+
+    // Char pointer points to beginning of data section
+    int countData = 0;
+    char *tempData = targetResult->data;
+    while (countData < sizeData) {
+        unsigned int byte = fgetc(out);
+        // debug("BYTE: %d ",byte );
+        if (byte == EOF) exit(EXIT_FAILURE);
+        *tempData = byte; // store char in this position
+        countData++;
+        tempData++;
+    }
+
+    return targetResult;
+
+    }
