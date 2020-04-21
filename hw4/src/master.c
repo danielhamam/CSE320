@@ -81,17 +81,28 @@ int master(int workers) {
 // REPEATEDLY ASSIGNING PROBLEMS TO IDLE WORKERS AND POSTS RESULTS RECEIVED FROM WORKERS ( i think at this point, all workers should be idle )
     while (1) {
 
+        pid_t targetWorker = -1; // the worker that we send a problem to, if found (-1 if not found)
+        int worker_index;
+
         // for loop to search for idle worker, find a problem and send to worker
         for (int c = 0; c < workers; c++) {
-            pid_t pid = arrayPID[c];
-
+            if (statesWorkers[c] == WORKER_IDLE) {
+                targetWorker = arrayPID[c]; // send problem to this worker (same as var)
+                worker_index = c;
+            }
         }
 
+        // NVAR = # of workers, VAR = ID of worker
+        int nvars = workers;
+        int var = targetWorker;
+
+        // Get the problem, and write to worker
+        struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
+        FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
+        writeProblem(targetProblem, fileInput);
+
+
     }
-
-    // first, get the problem
-
-    // waiting for children to exit
 
     sf_end();
 
