@@ -185,7 +185,6 @@ void writeResult(struct result *selectedResult, FILE *out) {
         return;
     }
 
-    // Doesn't include DATA
     char *charPtr2 = (char *) selectedResult;
     if (charPtr2 == NULL) return exit(EXIT_FAILURE);
     int countPtr2 = 0;
