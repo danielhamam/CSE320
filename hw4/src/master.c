@@ -16,13 +16,17 @@ void writeProblem(struct problem *problem, FILE *in);
 struct result *readResult(FILE *out);
 void SIGHCHLD_handler();
 
+int workerReference; // to access as global variable
+
 // Arrays
 volatile sig_atomic_t *statesWorkers; // to hold workers' states
+volatile sig_atomic_t *arrayPID;
 
 int master(int workers) {
 
     sf_start();
 
+    workerReference = workers;
     signal(SIGCHLD, SIGHCHLD_handler); // signal handler for SIGCHLD
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -33,7 +37,7 @@ int master(int workers) {
     // In unistd.h, 0 is file descriptor for standard input, 1 for standard output, 2 standard error output
 
     statesWorkers = malloc(workers * sizeof(sig_atomic_t));
-    pid_t arrayPID[workers]; // i dont think you have to malloc because only exist in this code block
+    arrayPID = malloc(workers * sizeof(pid_t));
 
     int masterToworker_pipes[workers][2]; // ARRAY (PIPE DESCRIPTORS), MASTER SENDS TO WORKER
     int workerTomaster_pipes[workers][2]; // ARRAY (PIPE DESCRIPTORS), WORKER SENDS TO MASTER
@@ -113,6 +117,8 @@ int master(int workers) {
         writeProblem(targetProblem, fileInput);
 
         kill(targetWorker, SIGCONT); // send worker the continue signal
+        statesWorkers[count] = WORKER_CONTINUED;
+        sf_change_state(arrayPID[count], WORKER_IDLE, WORKER_CONTINUED);
         // Now, worker does it's thing ....................
 
         FILE *fileOutput = fdopen(workerTomaster_pipes[worker_index][0], "r");
@@ -125,14 +131,11 @@ int master(int workers) {
 
     // Now, check if the workers are all IDLE
 
-    // int checkingWorkers = 0;
-    // int failure = 0;
-    // while (checkingWorkers < workers) {
-    //     if (statesWorkers[checkingWorkers] != WORKER_STOPPED) failure = 1; // we're gonna have to wait
-    //     checkingWorkers++;
-    // }
-
-    // if (failure == 1) // we should wait until they are all idle
+    int checkingWorkers = 0;
+    while (checkingWorkers < workers) {
+        if (statesWorkers[checkingWorkers] != WORKER_IDLE) kill(arrayPID[checkingWorkers], SIGHUP); // don't think you need to change state.
+        checkingWorkers++;
+    }
 
     // Here, let's send all the workers SIGTERM signal
     for (int i = 0; i < workers; i++) {
@@ -235,8 +238,49 @@ void SIGHCHLD_handler(void) {
     // 7th: CAN ABORT AT ANY MOMENT
     int wstatus;
 
-    pid_t targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG);
+    pid_t targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED); // maybe loop until waitpid return is nonzero
 
+    int pidIndex;
+    // First, find the index for later finding status of targetPID
+    for (int x = 0; x < workerReference; x++) {
+        pid_t returnPID = arrayPID[x];
+        if (returnPID == targetPID) pidIndex = x;
+    }
+    // now, find status of targetPID
+    int pidStatus = statesWorkers[pidIndex];
 
+    // -------------------------------------------------------------------------------------------------------
+    // -------------------------------------------------------------------------------------------------------
+    //                                           SIGNAL HANDLER CONDITIONS
+    // -------------------------------------------------------------------------------------------------------
+    // -------------------------------------------------------------------------------------------------------
 
+    // PROCESS: STARTED ------> to ------> IDLE
+    if (WIFSTOPPED(wstatus) != 0 && pidStatus == WORKER_STARTED) {
+        statesWorkers[pidIndex] = WORKER_IDLE;
+        sf_change_state(targetPID, pidStatus, WORKER_IDLE);
+    }
+
+    // PROCESS: RUNNING ------> to ------> STOPPED
+    else if (WIFSTOPPED(wstatus) != 0) {
+        statesWorkers[pidIndex] = WORKER_STOPPED;
+        sf_change_state(targetPID, pidStatus, WORKER_STOPPED);
+    }
+
+    // PROCESS: CONTINUED ------> to ------> RUNNING
+    else if (WIFCONTINUED(wstatus) != 0) {
+        statesWorkers[pidIndex] = WORKER_RUNNING;
+        sf_change_state(targetPID, pidStatus, WORKER_RUNNING);
+    }
+
+    // PROCESS: IDLE ------> to ------> EXITED
+    else if (WIFEXITED(wstatus) != 0) {
+        statesWorkers[pidIndex] = WORKER_EXITED;
+        sf_change_state(targetPID, pidStatus, WORKER_EXITED);
+    }
+    // PROCESS: SIGNAL ------> to ------> ABORTED
+    else {
+        statesWorkers[pidIndex] = WORKER_ABORTED;
+        sf_change_state(targetPID, pidStatus, WORKER_ABORTED);
+    }
 }
