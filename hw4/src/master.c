@@ -14,13 +14,16 @@
 struct problem *generateProblem();
 void writeProblem(struct problem *problem, FILE *in);
 struct result *readResult(FILE *out);
-void SIGHUP_handler();
+void SIGHCHLD_handler();
 
-volatile sig_atomic_t *statesWorkers = 0; // to hold workers' states
+// Arrays
+volatile sig_atomic_t *statesWorkers; // to hold workers' states
 
 int master(int workers) {
 
     sf_start();
+
+    signal(SIGCHLD, SIGHCHLD_handler); // signal handler for SIGCHLD
 
 // ---------------------------------------------------------------------------------------------------------------------------
 //                           INITIALIZE THE PROGRAM
@@ -57,10 +60,6 @@ int master(int workers) {
 
             debug("Started to work with Worker %d ", getpid());
 
-            int index = getppid() - getpid(); // Worker index
-            statesWorkers[index] = WORKER_STARTED;
-            sf_change_state(getpid(), 0, WORKER_STARTED); // changing the state to started (0 is init state)
-
             // change file descriptors in CHILD PROCESS (read = 0, write = 1)
             close(masterToworker_pipes[count][1]); // child reads from M2W, close write end
             close(workerTomaster_pipes[count][0]); // child writes to W2M, close read end
@@ -76,6 +75,10 @@ int master(int workers) {
         else { // parent process
             close(masterToworker_pipes[count][0]); // parent writes to M2W, close read end
             close(workerTomaster_pipes[count][1]); // parent reads from W2M, close write end
+
+            // changing state of WORKERS
+            statesWorkers[count] = WORKER_STARTED;
+            sf_change_state(arrayPID[count], 0, WORKER_STARTED); // changing the state to started (0 is init state)
         }
         count++;
     } // end of while loop
@@ -85,6 +88,8 @@ int master(int workers) {
 
 // REPEATEDLY ASSIGNING PROBLEMS TO IDLE WORKERS AND POSTS RESULTS RECEIVED FROM WORKERS ( i think at this point, all workers should be idle )
     while (1) {
+
+        // pause here and make sure everything
 
         pid_t targetWorker = -1; // the worker that we send a problem to, if found (-1 if not found)
         int worker_index;
@@ -97,7 +102,7 @@ int master(int workers) {
             }
         }
 
-        // NVAR = # of workers, VAR = ID of worker
+        // NVAR = # of workers, VAR = PID of worker
         int nvars = workers;
         int var = targetWorker;
 
@@ -105,9 +110,9 @@ int master(int workers) {
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
         if (targetProblem == NULL) break; // get out of loop
         FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
-        kill(targetWorker, SIGCONT); // send worker the continue signal
         writeProblem(targetProblem, fileInput);
 
+        kill(targetWorker, SIGCONT); // send worker the continue signal
         // Now, worker does it's thing ....................
 
         FILE *fileOutput = fdopen(workerTomaster_pipes[worker_index][0], "r");
@@ -119,12 +124,13 @@ int master(int workers) {
     }
 
     // Now, check if the workers are all IDLE
-    int checkingWorkers = 0;
-    int failure = 0;
-    while (checkingWorkers < workers) {
-        if (statesWorkers[checkingWorkers] != WORKER_STOPPED) failure = 1; // we're gonna have to wait
-        checkingWorkers++;
-    }
+
+    // int checkingWorkers = 0;
+    // int failure = 0;
+    // while (checkingWorkers < workers) {
+    //     if (statesWorkers[checkingWorkers] != WORKER_STOPPED) failure = 1; // we're gonna have to wait
+    //     checkingWorkers++;
+    // }
 
     // if (failure == 1) // we should wait until they are all idle
 
@@ -214,9 +220,11 @@ struct result *readResult(FILE *out) {
 
 }
 
-void SIGHUP_handler(void) {
+void SIGHCHLD_handler(void) {
 
-    int wstatus;
+    // int wstatus;
+
+    debug("MASTER ---> SIGHCHLD HANDLER INVOKED");
 
     // 1st: STARTED --> IDLE
     // 2nd: IDLE --> CONTINUED
@@ -225,5 +233,10 @@ void SIGHUP_handler(void) {
     // 5th: STOPPED --> IDLE
     // 6th: IDLE --> EXITED
     // 7th: CAN ABORT AT ANY MOMENT
+    int wstatus;
+
+    pid_t targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG);
+
+
 
 }
