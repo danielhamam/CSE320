@@ -53,38 +53,40 @@ int master(int workers) {
 // ---------------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------------
 
+    int count2 = 0;
     // NOW, LET'S FORK INTO THE CHILD PROCESSES
-
-    while (count < workers) {
-
+    while (count2 < workers) {
         pid_t tempPID = fork();
-        arrayPID[count] = tempPID; // When PID == 0, it is child process (are we assuming the worker processes are running? Sent SIGSTOP)
+        arrayPID[count2] = tempPID; // When PID == 0, it is child process (are we assuming the worker processes are running? Sent SIGSTOP)
         if (tempPID == -1) exit(EXIT_FAILURE);
         else if (tempPID == 0) {
 
-            debug("Started to work with Worker %d ", getpid());
+            debug("Started to work with Worker %d ", (int) getpid());
 
             // change file descriptors in CHILD PROCESS (read = 0, write = 1)
-            close(masterToworker_pipes[count][1]); // child reads from M2W, close write end
-            close(workerTomaster_pipes[count][0]); // child writes to W2M, close read end
+            close(masterToworker_pipes[count2][1]); // child reads from M2W, close write end
+            close(workerTomaster_pipes[count2][0]); // child writes to W2M, close read end
 
             // redirect to standard in/out
-            dup2(masterToworker_pipes[count][1],0); // child reads from M2W, make it stdin (WRITING END)
-            dup2(workerTomaster_pipes[count][0],1); // child writes to W2M, make it stdout (READING END)
+            dup2(masterToworker_pipes[count2][1],0); // child reads from M2W, make it stdin (WRITING END)
+            dup2(workerTomaster_pipes[count2][0],1); // child writes to W2M, make it stdout (READING END)
 
             // execute the worker program
             execl("bin/polya_worker", "bin/polya_worker", NULL);
 
         } // end of worker process running, would stop with SIGSTOP in worker
         else { // parent process
-            close(masterToworker_pipes[count][0]); // parent writes to M2W, close read end
-            close(workerTomaster_pipes[count][1]); // parent reads from W2M, close write end
+
+            debug("Started to run parent process in fork");
+
+            close(masterToworker_pipes[count2][0]); // parent writes to M2W, close read end
+            close(workerTomaster_pipes[count2][1]); // parent reads from W2M, close write end
 
             // changing state of WORKERS
-            statesWorkers[count] = WORKER_STARTED;
-            sf_change_state(arrayPID[count], 0, WORKER_STARTED); // changing the state to started (0 is init state)
+            statesWorkers[count2] = WORKER_STARTED;
+            sf_change_state(arrayPID[count2], 0, WORKER_STARTED); // changing the state to started (0 is init state)
         }
-        count++;
+        count2++;
     } // end of while loop
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -103,18 +105,23 @@ int master(int workers) {
             if (statesWorkers[c] == WORKER_IDLE) {
                 targetWorker = arrayPID[c]; // send problem to this worker (same as var)
                 worker_index = c;
+                break;
             }
         }
 
-        // NVAR = # of workers, VAR = PID of worker
+        // NVAR = # of workers, VAR = ID of worker
         int nvars = workers;
-        int var = targetWorker;
+        int var = worker_index;
+
+        debug("NVARS: %d ", workers);
+        debug("VAR : %d" , worker_index);
 
         // Get the problem, and write to worker
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
         if (targetProblem == NULL) break; // get out of loop
         FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
         writeProblem(targetProblem, fileInput);
+        sf_send_problem( targetWorker, targetProblem);
 
         kill(targetWorker, SIGCONT); // send worker the continue signal
         statesWorkers[count] = WORKER_CONTINUED;
@@ -122,6 +129,7 @@ int master(int workers) {
         // Now, worker does it's thing ....................
 
         FILE *fileOutput = fdopen(workerTomaster_pipes[worker_index][0], "r");
+        waitpid(targetWorker, NULL, WUNTRACED | WNOHANG | WCONTINUED); // wait for a signal
         struct result *targetResult = readResult(fileOutput);
 
         sf_recv_result(targetWorker, targetResult);
@@ -133,7 +141,10 @@ int master(int workers) {
 
     int checkingWorkers = 0;
     while (checkingWorkers < workers) {
-        if (statesWorkers[checkingWorkers] != WORKER_IDLE) kill(arrayPID[checkingWorkers], SIGHUP); // don't think you need to change state.
+        if (statesWorkers[checkingWorkers] != WORKER_IDLE) {
+            kill(arrayPID[checkingWorkers], SIGHUP); // don't think you need to change state.
+            sf_cancel(arrayPID[checkingWorkers]); // cancel the workers that were sent SIGHUP
+        }
         checkingWorkers++;
     }
 
@@ -259,28 +270,33 @@ void SIGHCHLD_handler(void) {
     if (WIFSTOPPED(wstatus) != 0 && pidStatus == WORKER_STARTED) {
         statesWorkers[pidIndex] = WORKER_IDLE;
         sf_change_state(targetPID, pidStatus, WORKER_IDLE);
+        debug("Worker process %d switched from STARTED to IDLE", (int) targetPID);
     }
 
     // PROCESS: RUNNING ------> to ------> STOPPED
     else if (WIFSTOPPED(wstatus) != 0) {
         statesWorkers[pidIndex] = WORKER_STOPPED;
         sf_change_state(targetPID, pidStatus, WORKER_STOPPED);
+        debug("Worker process %d switched from RUNNING to STOPPED", (int) targetPID);
     }
 
     // PROCESS: CONTINUED ------> to ------> RUNNING
     else if (WIFCONTINUED(wstatus) != 0) {
         statesWorkers[pidIndex] = WORKER_RUNNING;
         sf_change_state(targetPID, pidStatus, WORKER_RUNNING);
+        debug("Worker process %d switched from CONTINUED to RUNNING", (int) targetPID);
     }
 
     // PROCESS: IDLE ------> to ------> EXITED
     else if (WIFEXITED(wstatus) != 0) {
         statesWorkers[pidIndex] = WORKER_EXITED;
         sf_change_state(targetPID, pidStatus, WORKER_EXITED);
+        debug("Worker process %d switched from IDLE to EXITED", (int) targetPID);
     }
     // PROCESS: SIGNAL ------> to ------> ABORTED
     else {
         statesWorkers[pidIndex] = WORKER_ABORTED;
         sf_change_state(targetPID, pidStatus, WORKER_ABORTED);
+        debug("Worker process %d has ABORTED", (int) targetPID);
     }
 }
