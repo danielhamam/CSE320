@@ -57,7 +57,6 @@ int master(int workers) {
     // NOW, LET'S FORK INTO THE CHILD PROCESSES
     while (count2 < workers) {
         pid_t tempPID = fork();
-        arrayPID[count2] = tempPID; // When PID == 0, it is child process (are we assuming the worker processes are running? Sent SIGSTOP)
         if (tempPID == -1) exit(EXIT_FAILURE);
         else if (tempPID == 0) {
 
@@ -77,6 +76,7 @@ int master(int workers) {
         } // end of worker process running, would stop with SIGSTOP in worker
         else { // parent process
 
+            arrayPID[count2] = tempPID; // When PID == 0, it is child process (are we assuming the worker processes are running? Sent SIGSTOP)
             debug("Started to run parent process in fork");
 
             close(masterToworker_pipes[count2][0]); // parent writes to M2W, close read end
@@ -120,34 +120,52 @@ int master(int workers) {
                 break;
             }
         }
-        debug("Target IDLE Worker found is: %d ", targetWorker);
 
-        // NVAR = # of workers, VAR = ID of worker
-        int nvars = workers;
-        int var = worker_index;
+        debug("Target IDLE Worker found is PID: %d ", targetWorker);
+        if (targetWorker == -1) break; // no workers are idle
 
-        debug("NVARS: %d ", workers);
-        debug("VAR : %d" , worker_index);
+        // STEP --> LETS GET THE PROBLEM
+        int nvars = workers; debug("NVARS: %d ", workers); // NVAR = # of workers,
+        int var = worker_index; debug("VAR : %d" , worker_index); // # VAR = ID of worker
 
-        // Get the problem, and write to worker
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
         if (targetProblem == NULL) break; // get out of loop
+
         FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
         writeProblem(targetProblem, fileInput);
         sf_send_problem( targetWorker, targetProblem);
 
+        // SEND CONTINUE SIGNAL to WORKER
         kill(targetWorker, SIGCONT); // send worker the continue signal
-        statesWorkers[count] = WORKER_CONTINUED;
-        sf_change_state(arrayPID[count], WORKER_IDLE, WORKER_CONTINUED);
-        // Now, worker does it's thing ....................
+        statesWorkers[worker_index] = WORKER_CONTINUED;
+        sf_change_state(arrayPID[worker_index], WORKER_IDLE, WORKER_CONTINUED);
+        debug("Worker %d is now continued ", arrayPID[count]);
 
-        FILE *fileOutput = fdopen(workerTomaster_pipes[worker_index][0], "r");
-        waitpid(targetWorker, NULL, WUNTRACED | WNOHANG | WCONTINUED); // wait for a signal
-        struct result *targetResult = readResult(fileOutput);
+        // wait until one of the results are available take first worker that's in stopped state, if none then continue
+        int foundstoppedWorker = 0;
+        int foundstoppedWorker_index;
+        pid_t foundWorker;
+        for (int i = 0; i < workers; i++) {
+            if (statesWorkers[i] == WORKER_STOPPED) {
+                debug("Found Stopped Worker!");
+                foundWorker = arrayPID[i];
+                foundstoppedWorker = 1;
+                foundstoppedWorker_index = i;
+                break;
+            }
+        }
 
-        sf_recv_result(targetWorker, targetResult);
-        post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
+        // Worker is now "Working on solving a problem that the master has sent"
+        if (foundstoppedWorker) {
+            // FILE *fileOutput = fdopen(workerTomaster_pipes[worker_index][0], "r");
+             FILE *fileOutput = fdopen(workerTomaster_pipes[foundstoppedWorker_index][0], "r");
+            struct result *targetResult = readResult(fileOutput);
 
+            sf_recv_result(foundWorker, targetResult);
+            post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
+            free(targetResult);
+        }
+        foundstoppedWorker = 0;
     }
 
     int checkingWorkers = 0;
@@ -165,6 +183,10 @@ int master(int workers) {
         kill(target, SIGTERM);
     }
 
+    // Let's free all the stuff
+    free((void *)statesWorkers);
+    free((void *)arrayPID);
+
     sf_end();
     return EXIT_SUCCESS;
 
@@ -173,20 +195,28 @@ int master(int workers) {
 // From master to worker
 void writeProblem(struct problem *selectedProblem, FILE *in) {
 
+    debug("Writing problem to Worker");
+
     // Includes both header and data
     char *charPtr = (char *) selectedProblem;
     if (charPtr == NULL) return exit(EXIT_FAILURE);
     int countPtr = 0;
     int overallSize = selectedProblem->size;
     while (countPtr != overallSize) {
+        // debug("WRITING A BYTE %d ", countPtr);
         if (*charPtr == EOF) return exit(EXIT_FAILURE);
         fputc(*charPtr, in);
         charPtr++;
         countPtr++;
     }
+
+    fflush(in);
+
 }
 
 struct result *readResult(FILE *out) {
+
+    debug("Reading result from Worker");
 
     // First, read the SIZE variable (know how much to malloc)
     size_t count_size = 0;
@@ -240,7 +270,7 @@ struct result *readResult(FILE *out) {
         countData++;
         tempData++;
     }
-
+    fflush(out);
     return targetResult;
 
 }
@@ -259,8 +289,9 @@ void SIGCHLD_handler(void) {
     // 6th: IDLE --> EXITED
     // 7th: CAN ABORT AT ANY MOMENT
     int wstatus;
+    pid_t targetPID;
 
-    pid_t targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED); // maybe loop until waitpid return is nonzero
+    while ((targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED)) != 0) {
 
     int pidIndex;
     // First, find the index for later finding status of targetPID
@@ -310,4 +341,6 @@ void SIGCHLD_handler(void) {
         sf_change_state(targetPID, pidStatus, WORKER_ABORTED);
         debug("Worker process %d has ABORTED", (int) targetPID);
     }
+
+    } // end of while loop
 }
