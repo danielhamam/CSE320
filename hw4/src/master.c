@@ -14,7 +14,7 @@
 struct problem *generateProblem();
 void writeProblem(struct problem *problem, FILE *in);
 struct result *readResult(FILE *out);
-void SIGHCHLD_handler();
+void SIGCHLD_handler();
 
 int workerReference; // to access as global variable
 
@@ -27,7 +27,7 @@ int master(int workers) {
     sf_start();
 
     workerReference = workers;
-    signal(SIGCHLD, SIGHCHLD_handler); // signal handler for SIGCHLD
+    signal(SIGCHLD, SIGCHLD_handler); // signal handler for SIGCHLD
 
 // ---------------------------------------------------------------------------------------------------------------------------
 //                           INITIALIZE THE PROGRAM
@@ -61,7 +61,7 @@ int master(int workers) {
         if (tempPID == -1) exit(EXIT_FAILURE);
         else if (tempPID == 0) {
 
-            debug("Started to work with Worker %d ", (int) getpid());
+            debug("Forking worker %d ", (int) getpid());
 
             // change file descriptors in CHILD PROCESS (read = 0, write = 1)
             close(masterToworker_pipes[count2][1]); // child reads from M2W, close write end
@@ -92,10 +92,21 @@ int master(int workers) {
 // ---------------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------------
 
+    // Let's wait for the workers to all be IDLE
+    int counter2 = 0;
+    while (counter2 < workers) {
+        // int selectPID = (int) arrayPID[counter2];
+        // debug("Waiting for %d to send SIGCHLD signal", selectPID);
+        waitpid(-1, NULL, WNOHANG ); // WAIT FOR SIGCHLD SIGNAL TO BE SENT.
+        pause();
+        counter2++;
+    }
+
+
 // REPEATEDLY ASSIGNING PROBLEMS TO IDLE WORKERS AND POSTS RESULTS RECEIVED FROM WORKERS ( i think at this point, all workers should be idle )
     while (1) {
 
-        // pause here and make sure everything
+        // pause here and make sure every WORKER PROCESS is idle before proceeding
 
         pid_t targetWorker = -1; // the worker that we send a problem to, if found (-1 if not found)
         int worker_index;
@@ -105,9 +116,11 @@ int master(int workers) {
             if (statesWorkers[c] == WORKER_IDLE) {
                 targetWorker = arrayPID[c]; // send problem to this worker (same as var)
                 worker_index = c;
+                debug("Found IDLE Worker %d ", arrayPID[c]);
                 break;
             }
         }
+        debug("Target IDLE Worker found is: %d ", targetWorker);
 
         // NVAR = # of workers, VAR = ID of worker
         int nvars = workers;
@@ -136,8 +149,6 @@ int master(int workers) {
         post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
 
     }
-
-    // Now, check if the workers are all IDLE
 
     int checkingWorkers = 0;
     while (checkingWorkers < workers) {
@@ -234,11 +245,11 @@ struct result *readResult(FILE *out) {
 
 }
 
-void SIGHCHLD_handler(void) {
+void SIGCHLD_handler(void) {
 
     // int wstatus;
 
-    debug("MASTER ---> SIGHCHLD HANDLER INVOKED");
+    debug("Master's SIGCHLD handler invoked");
 
     // 1st: STARTED --> IDLE
     // 2nd: IDLE --> CONTINUED
