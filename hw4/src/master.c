@@ -14,6 +14,7 @@
 struct problem *generateProblem();
 void writeProblem(struct problem *problem, FILE *in);
 struct result *readResult(FILE *out);
+void SIGHUP_handler();
 
 volatile sig_atomic_t *statesWorkers = 0; // to hold workers' states
 
@@ -56,6 +57,8 @@ int master(int workers) {
 
             debug("Started to work with Worker %d ", getpid());
 
+            int index = getppid() - getpid(); // Worker index
+            statesWorkers[index] = WORKER_STARTED;
             sf_change_state(getpid(), 0, WORKER_STARTED); // changing the state to started (0 is init state)
 
             // change file descriptors in CHILD PROCESS (read = 0, write = 1)
@@ -100,18 +103,40 @@ int master(int workers) {
 
         // Get the problem, and write to worker
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
+        if (targetProblem == NULL) break; // get out of loop
         FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
         kill(targetWorker, SIGCONT); // send worker the continue signal
         writeProblem(targetProblem, fileInput);
 
-        // When SIGCHLD received
+        // Now, worker does it's thing ....................
 
+        FILE *fileOutput = fdopen(workerTomaster_pipes[worker_index][0], "r");
+        struct result *targetResult = readResult(fileOutput);
+
+        sf_recv_result(targetWorker, targetResult);
+        post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
 
     }
 
-    sf_end();
+    // Now, check if the workers are all IDLE
+    int checkingWorkers = 0;
+    int failure = 0;
+    while (checkingWorkers < workers) {
+        if (statesWorkers[checkingWorkers] != WORKER_STOPPED) failure = 1; // we're gonna have to wait
+        checkingWorkers++;
+    }
 
+    // if (failure == 1) // we should wait until they are all idle
+
+    // Here, let's send all the workers SIGTERM signal
+    for (int i = 0; i < workers; i++) {
+        pid_t target = arrayPID[i];
+        kill(target, SIGTERM);
+    }
+
+    sf_end();
     return EXIT_SUCCESS;
+
 }
 
 // From master to worker
@@ -187,4 +212,18 @@ struct result *readResult(FILE *out) {
 
     return targetResult;
 
-    }
+}
+
+void SIGHUP_handler(void) {
+
+    int wstatus;
+
+    // 1st: STARTED --> IDLE
+    // 2nd: IDLE --> CONTINUED
+    // 3rd: CONTINUED --> RUNNING
+    // 4th: RUNNING --> STOPPED
+    // 5th: STOPPED --> IDLE
+    // 6th: IDLE --> EXITED
+    // 7th: CAN ABORT AT ANY MOMENT
+
+}
