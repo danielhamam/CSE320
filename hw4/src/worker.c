@@ -95,7 +95,7 @@ struct problem *readProblem(FILE *stream) {
 
     struct problem *read_problem = (struct problem *) realloc(read_problem_temp, tempSize);
     read_problem->size = (size_t) tempSize;
-    debug("read_problem->size: %d ", (int) read_problem->size);
+    // debug("read_problem->size: %d ", (int) read_problem->size);
 
     // Second, read the short type variable
     int count_type = 0;
@@ -163,7 +163,7 @@ struct problem *readProblem(FILE *stream) {
         tempData++;
     }
 
-    // debug("Problem: size: %ld, type: %d, id: %d, nvars: %d, var :%d ", read_problem->size, read_problem->type, read_problem->id, read_problem->nvars, read_problem->var);
+    debug("Problem: size: %ld, type: %d, id: %d, nvars: %d, var :%d ", read_problem->size, read_problem->type, read_problem->id, read_problem->nvars, read_problem->var);
 
     fflush(stream);
 

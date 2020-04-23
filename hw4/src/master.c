@@ -79,8 +79,8 @@ int master(int workers) {
             arrayPID[count2] = tempPID; // When PID == 0, it is child process (are we assuming the worker processes are running? Sent SIGSTOP)
             debug("Started to run parent process in fork");
 
-            close(masterToworker_pipes[count2][0]); // parent writes to M2W, close read end
-            close(workerTomaster_pipes[count2][1]); // parent reads from W2M, close write end
+            // close(masterToworker_pipes[count2][0]); // parent writes to M2W, close read end
+            // close(workerTomaster_pipes[count2][1]); // parent reads from W2M, close write end
 
             // changing state of WORKERS
             statesWorkers[count2] = WORKER_STARTED;
@@ -95,17 +95,23 @@ int master(int workers) {
     // Let's wait for the workers to all be IDLE
     int counter2 = 0;
 
-    sigset_t mask;
-    sigfillset(&mask);
-    sigdelset(&mask, SIGCHLD);
+    sigset_t old_mask;
+    sigset_t new_mask;
+    sigemptyset(&new_mask);
+    sigaddset(&new_mask, SIGCHLD);
+
+    sigset_t susMask;
+    sigfillset(&susMask);
+    sigdelset(&susMask, SIGCHLD);
 
     while (counter2 < workers) {
         // pause();
-        sigsuspend(&mask); // suspends all signals except SIGCHLD, waits for this one
+        sigsuspend(&susMask); // suspends all signals except SIGCHLD, waits for this one
         counter2++;
     }
 
     int lastMove = 0;
+
 // REPEATEDLY ASSIGNING PROBLEMS TO IDLE WORKERS AND POSTS RESULTS RECEIVED FROM WORKERS ( i think at this point, all workers should be idle )
     while (1) {
 
@@ -124,6 +130,8 @@ int master(int workers) {
             }
         }
 
+        if (targetWorker == -1) goto FINISHING;
+
         // debug("Target IDLE Worker found is PID: %d ", targetWorker);
         // debug("Worker Index is : %d ", worker_index);
 
@@ -138,16 +146,20 @@ int master(int workers) {
             goto FINISHING;
         }
 
-        debug("Writing problem to Worker %d" , (int) targetWorker);
+        // debug("Writing problem to Worker %d" , (int) targetWorker);
         FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
         writeProblem(targetProblem, fileInput);
         sf_send_problem(targetWorker, targetProblem);
+
+        sigprocmask(SIG_BLOCK, &new_mask, &old_mask);
 
         // SEND CONTINUE SIGNAL to WORKER
         kill(targetWorker, SIGCONT); // send worker the continue signal
         statesWorkers[worker_index] = WORKER_CONTINUED;
         sf_change_state(arrayPID[worker_index], WORKER_IDLE, WORKER_CONTINUED);
         // debug("Worker %d is now continued ", arrayPID[worker_index]);
+
+        sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
 
         // sigsuspend(&mask); // To receive SIGCHLD to go to Running
 
@@ -156,8 +168,9 @@ int master(int workers) {
         FINISHING:
             // debug("FINISHING PART OF MAIN LOOPS");
             for (int finish_count = 0; finish_count < workers; finish_count++) {
-                if (statesWorkers[finish_count] == WORKER_STOPPED) {
-                    // debug("Found Stopped Worker");
+                // if (statesWorkers[finish_count == WORKER_RUNNING]) pause();
+                if (statesWorkers[finish_count] == WORKER_STOPPED) { // the result can now be read
+                    debug("Found Stopped Worker");
 
                     // Get Details of the Worker
                     pid_t foundWorker = arrayPID[finish_count];
@@ -166,14 +179,20 @@ int master(int workers) {
                     FILE *fileOutput = fdopen(workerTomaster_pipes[foundstoppedWorker_index][0], "r");
                     struct result *targetResult = readResult(fileOutput);
                     sf_recv_result(foundWorker, targetResult);
+                    // debug("Current Problem For Post-Result: 'problem->size: %d' " , (int) targetProblem->size);
                     post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
                     free(targetResult);
+
+                    // sigprocmask(SIG_BLOCK, &new_mask, &old_mask);
 
                     // Set it to Worker IDLE
                     statesWorkers[worker_index] = WORKER_IDLE;
                     sf_change_state(arrayPID[worker_index], WORKER_STOPPED, WORKER_IDLE);
                     // debug("Worker changed from Stopped to IDLE");
                     break;
+
+                    // sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
+
                 }
             }
 
@@ -226,9 +245,7 @@ void writeProblem(struct problem *selectedProblem, FILE *in) {
         charPtr++;
         countPtr++;
     }
-
     fflush(in);
-
 }
 
 struct result *readResult(FILE *out) {
@@ -268,26 +285,37 @@ struct result *readResult(FILE *out) {
     unsigned int tempFailed = fgetc(out);
     targetResult->failed = tempFailed;
 
+    // Read padding?
+    int countPadding = 0;
+    while (countPadding < 5) {
+        fgetc(out);
+        countPadding++;
+    }
+
     // Fourth, read the data section
     int sizeData = (int) (targetResult->size) - sizeof(struct result);
+    // debug("SizeData : %d ", sizeData);
+    // debug("TargetResult'size : %d ", (int) targetResult->size);
+    // debug("Size of result: %d ", (int) sizeof(struct result));
 
     void *array2 = malloc(sizeData);
-    if (array2 == NULL) EXIT_FAILURE;
+    if (array2 == NULL) exit(EXIT_FAILURE);
     memcpy(targetResult->data, array2, (size_t) sizeData); // Copy from the array we made to the read_problem->data)
     free(array2);
 
     // Char pointer points to beginning of data section
     int countData = 0;
-    char *tempData = targetResult->data;
+    char *tempData = (char *) targetResult->data;
     while (countData < sizeData) {
         unsigned int byte = fgetc(out);
+        // debug("BYTE: %d ", countData);
         // debug("BYTE: %d ",byte );
-        if (byte == EOF) exit(EXIT_FAILURE);
         *tempData = byte; // store char in this position
         countData++;
         tempData++;
     }
     fflush(out);
+    debug("Result: size: %d, id: %d, failed: %d, data-size: %d", (int) targetResult->size, (int) targetResult->id, (int) targetResult->failed, (int) countData);
     return targetResult;
 
 }
@@ -328,34 +356,34 @@ void SIGCHLD_handler(void) {
     if (WIFSTOPPED(wstatus) != 0 && pidStatus == WORKER_STARTED) {
         statesWorkers[pidIndex] = WORKER_IDLE;
         sf_change_state(targetPID, pidStatus, WORKER_IDLE);
-        debug("Worker process %d switched from STARTED to IDLE", (int) targetPID);
+        // debug("Worker process %d switched from STARTED to IDLE", (int) targetPID);
     }
 
     // PROCESS: RUNNING ------> to ------> STOPPED
     else if (WIFSTOPPED(wstatus) != 0) {
         statesWorkers[pidIndex] = WORKER_STOPPED;
         sf_change_state(targetPID, pidStatus, WORKER_STOPPED);
-        debug("Worker process %d switched from RUNNING to STOPPED", (int) targetPID);
+        // debug("Worker process %d switched from RUNNING to STOPPED", (int) targetPID);
     }
 
     // PROCESS: CONTINUED ------> to ------> RUNNING
     else if (WIFCONTINUED(wstatus) != 0) {
         statesWorkers[pidIndex] = WORKER_RUNNING;
         sf_change_state(targetPID, pidStatus, WORKER_RUNNING);
-        debug("Worker process %d switched from CONTINUED to RUNNING", (int) targetPID);
+        // debug("Worker process %d switched from CONTINUED to RUNNING", (int) targetPID);
     }
 
     // PROCESS: IDLE ------> to ------> EXITED
     else if (WIFEXITED(wstatus) != 0) {
         statesWorkers[pidIndex] = WORKER_EXITED;
         sf_change_state(targetPID, pidStatus, WORKER_EXITED);
-        debug("Worker process %d switched from IDLE to EXITED", (int) targetPID);
+        // debug("Worker process %d switched from IDLE to EXITED", (int) targetPID);
     }
     // PROCESS: SIGNAL ------> to ------> ABORTED
     else {
         statesWorkers[pidIndex] = WORKER_ABORTED;
         sf_change_state(targetPID, pidStatus, WORKER_ABORTED);
-        debug("Worker process %d has ABORTED", (int) targetPID);
+        // debug("Worker process %d has ABORTED", (int) targetPID);
     }
 
     } // end of while loop
