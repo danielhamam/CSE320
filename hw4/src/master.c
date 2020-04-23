@@ -67,8 +67,8 @@ int master(int workers) {
             close(workerTomaster_pipes[count2][0]); // child writes to W2M, close read end
 
             // redirect to standard in/out
-            dup2(masterToworker_pipes[count2][1],0); // child reads from M2W, make it stdin (WRITING END)
-            dup2(workerTomaster_pipes[count2][0],1); // child writes to W2M, make it stdout (READING END)
+            dup2(masterToworker_pipes[count2][0], STDIN_FILENO); // child reads from M2W, make it stdin (WRITING END)
+            dup2(workerTomaster_pipes[count2][1], STDOUT_FILENO); // child writes to W2M, make it stdout (READING END)
 
             // execute the worker program
             execl("bin/polya_worker", "bin/polya_worker", NULL);
@@ -102,7 +102,7 @@ int master(int workers) {
         counter2++;
     }
 
-
+    int lastMove = 0;
 // REPEATEDLY ASSIGNING PROBLEMS TO IDLE WORKERS AND POSTS RESULTS RECEIVED FROM WORKERS ( i think at this point, all workers should be idle )
     while (1) {
 
@@ -116,58 +116,66 @@ int master(int workers) {
             if (statesWorkers[c] == WORKER_IDLE) {
                 targetWorker = arrayPID[c]; // send problem to this worker (same as var)
                 worker_index = c;
-                debug("Found IDLE Worker %d ", arrayPID[c]);
+                // debug("Found IDLE Worker %d ", arrayPID[c]);
                 break;
             }
         }
 
-        debug("Target IDLE Worker found is PID: %d ", targetWorker);
-        if (targetWorker == -1) break; // no workers are idle
+        // debug("Target IDLE Worker found is PID: %d ", targetWorker);
+        // debug("Worker Index is : %d ", worker_index);
 
         // STEP --> LETS GET THE PROBLEM
-        int nvars = workers; debug("NVARS: %d ", workers); // NVAR = # of workers,
-        int var = worker_index; debug("VAR : %d" , worker_index); // # VAR = ID of worker
+        int nvars = workers; // NVAR = # of workers,
+        int var = worker_index; // # VAR = ID of worker
 
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
-        if (targetProblem == NULL) break; // get out of loop
+        if (targetProblem == NULL || targetWorker == -1) {
+            lastMove = 1;
+            // debug("PROBLEM IS NULL");
+            goto FINISHING;
+        }
 
         FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
         writeProblem(targetProblem, fileInput);
-        sf_send_problem( targetWorker, targetProblem);
+        sf_send_problem(targetWorker, targetProblem);
 
         // SEND CONTINUE SIGNAL to WORKER
         kill(targetWorker, SIGCONT); // send worker the continue signal
         statesWorkers[worker_index] = WORKER_CONTINUED;
         sf_change_state(arrayPID[worker_index], WORKER_IDLE, WORKER_CONTINUED);
-        debug("Worker %d is now continued ", arrayPID[count]);
+        debug("Worker %d is now continued ", arrayPID[worker_index]);
 
-        // wait until one of the results are available take first worker that's in stopped state, if none then continue
-        int foundstoppedWorker = 0;
-        int foundstoppedWorker_index;
-        pid_t foundWorker;
+        if (statesWorkers[worker_index] == WORKER_CONTINUED) pause();
+
+        FINISHING:
+            // debug("FINISHING");
         for (int i = 0; i < workers; i++) {
             if (statesWorkers[i] == WORKER_STOPPED) {
-                debug("Found Stopped Worker!");
-                foundWorker = arrayPID[i];
-                foundstoppedWorker = 1;
-                foundstoppedWorker_index = i;
+                debug("Found Stopped Worker");
+
+                // Get Details of the Worker
+                pid_t foundWorker = arrayPID[i];
+                int foundstoppedWorker_index = i;
+
+                FILE *fileOutput = fdopen(workerTomaster_pipes[foundstoppedWorker_index][0], "r");
+                struct result *targetResult = readResult(fileOutput);
+                sf_recv_result(foundWorker, targetResult);
+                post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
+                free(targetResult);
+
+                // Set it to Worker IDLE
+                statesWorkers[worker_index] = WORKER_IDLE;
+                sf_change_state(arrayPID[worker_index], WORKER_STOPPED, WORKER_IDLE);
+                // debug("Worker changed from Stopped to IDLE");
                 break;
             }
         }
 
-        // Worker is now "Working on solving a problem that the master has sent"
-        if (foundstoppedWorker) {
-            // FILE *fileOutput = fdopen(workerTomaster_pipes[worker_index][0], "r");
-             FILE *fileOutput = fdopen(workerTomaster_pipes[foundstoppedWorker_index][0], "r");
-            struct result *targetResult = readResult(fileOutput);
+        if (lastMove) break;
 
-            sf_recv_result(foundWorker, targetResult);
-            post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
-            free(targetResult);
-        }
-        foundstoppedWorker = 0;
-    }
+    } // end of while loop
 
+    // debug("Exited main loop");
     int checkingWorkers = 0;
     while (checkingWorkers < workers) {
         if (statesWorkers[checkingWorkers] != WORKER_IDLE) {
@@ -180,6 +188,7 @@ int master(int workers) {
     // Here, let's send all the workers SIGTERM signal
     for (int i = 0; i < workers; i++) {
         pid_t target = arrayPID[i];
+        kill(target, SIGCONT);
         kill(target, SIGTERM);
     }
 
@@ -290,14 +299,15 @@ void SIGCHLD_handler(void) {
     // 7th: CAN ABORT AT ANY MOMENT
     int wstatus;
     pid_t targetPID;
+    int pidIndex;
 
     while ((targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED)) != 0) {
+    // targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED);
 
-    int pidIndex;
     // First, find the index for later finding status of targetPID
     for (int x = 0; x < workerReference; x++) {
         pid_t returnPID = arrayPID[x];
-        if (returnPID == targetPID) pidIndex = x;
+        if (returnPID == targetPID) { pidIndex = x; break; }
     }
     // now, find status of targetPID
     int pidStatus = statesWorkers[pidIndex];

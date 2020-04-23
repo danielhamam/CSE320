@@ -35,9 +35,10 @@ int worker(void) {
         SIGHUP_CANCELLED = 0;
         raise(19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
 // ------------------------------------------------------------
+        debug("Worker is running");
         struct problem *targetProblem = readProblem(stdin);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
-        // debug("Found targetMethod");
+        debug("Found targetMethod");
         struct result *targetRESULT;
         if (CHECK_FLAG == 1) targetRESULT = create_failedResult();
         else {
@@ -45,7 +46,7 @@ int worker(void) {
             if (targetRESULT == NULL) { targetRESULT = create_failedResult(); }
         }
         SIGHUP_CANCELLED = 1; // can't change CHECK_FLAG from 1
-        // debug("Found result, before writing");
+        debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
         // free what you malloced
         free(targetProblem);
@@ -68,7 +69,7 @@ int worker(void) {
 /* READING THE PROBLEM FROM INPUT STREAM*/
 // TAKES NOTHING, RETURNS READ PROBLE
 struct problem *readProblem(FILE *stream) {
-    // debug("Reading the new problem");
+    debug("Reading the new problem");
 
     // Initialize new pointer for problem
     struct problem *read_problem_temp = (struct problem *) malloc(sizeof(struct problem));
@@ -80,6 +81,7 @@ struct problem *readProblem(FILE *stream) {
     size_t count_size = 0;
     unsigned int tempSize = 0;
     while (count_size < sizeof(size_t)) {
+        // debug("Size-count: %d ", (int) count_size);
         unsigned int byte = fgetc(stream);
         if (byte == EOF) exit(EXIT_FAILURE);
         tempSize += byte;
@@ -93,6 +95,7 @@ struct problem *readProblem(FILE *stream) {
 
     struct problem *read_problem = (struct problem *) realloc(read_problem_temp, tempSize);
     read_problem->size = (size_t) tempSize;
+    debug("read_problem->size: %d ", (int) read_problem->size);
 
     // Second, read the short type variable
     int count_type = 0;
@@ -104,6 +107,7 @@ struct problem *readProblem(FILE *stream) {
         count_type++;
     }
     read_problem->type = (short) tempType;
+    // debug("read_problem->type: %d ", (int) read_problem->type);
 
     // Third, read the short ID variable
     int count_ID = 0;
@@ -170,7 +174,7 @@ struct problem *readProblem(FILE *stream) {
 void writeResult(struct result *selectedResult, FILE *out) {
 
     // debug("Result: size: %ld, id: %d, failed: %d ", selectedResult->size, selectedResult->id, (int) selectedResult->failed);
-    // debug("Writing the result from the worker process");
+    debug("Writing the result from the worker process");
 
     if (CHECK_FLAG == 1) {
         char *charPtr = (char * ) selectedResult;
@@ -204,7 +208,7 @@ void SIGHUP_handler(void) {
     // cancel its current solution attempt
     // SIGHUP_CAL = 1;
     if (!SIGHUP_CANCELLED) CHECK_FLAG = 1;
-    // debug("SIGHUP Handler invoked");
+    debug("SIGHUP Handler invoked");
 }
 
 void SIGTERM_handler(void) {
