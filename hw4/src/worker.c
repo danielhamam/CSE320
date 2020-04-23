@@ -35,10 +35,10 @@ int worker(void) {
         SIGHUP_CANCELLED = 0;
         raise(19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
 // ------------------------------------------------------------
-        debug("Worker is running");
+        // debug("Worker is running");
         struct problem *targetProblem = readProblem(stdin);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
-        debug("Found targetMethod");
+        // debug("Found targetMethod");
         struct result *targetRESULT;
         if (CHECK_FLAG == 1) targetRESULT = create_failedResult();
         else {
@@ -46,7 +46,7 @@ int worker(void) {
             if (targetRESULT == NULL) { targetRESULT = create_failedResult(); }
         }
         SIGHUP_CANCELLED = 1; // can't change CHECK_FLAG from 1
-        debug("Found result, before writing");
+        // debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
         // free what you malloced
         free(targetProblem);
@@ -69,7 +69,7 @@ int worker(void) {
 /* READING THE PROBLEM FROM INPUT STREAM*/
 // TAKES NOTHING, RETURNS READ PROBLE
 struct problem *readProblem(FILE *stream) {
-    debug("Reading the new problem");
+    // debug("Reading the new problem");
 
     // Initialize new pointer for problem
     struct problem *read_problem_temp = (struct problem *) malloc(sizeof(struct problem));

@@ -94,11 +94,14 @@ int master(int workers) {
 
     // Let's wait for the workers to all be IDLE
     int counter2 = 0;
+
+    sigset_t mask;
+    sigfillset(&mask);
+    sigdelset(&mask, SIGCHLD);
+
     while (counter2 < workers) {
-        // int selectPID = (int) arrayPID[counter2];
-        // debug("Waiting for %d to send SIGCHLD signal", selectPID);
-        waitpid(-1, NULL, WNOHANG ); // WAIT FOR SIGCHLD SIGNAL TO BE SENT.
-        pause();
+        // pause();
+        sigsuspend(&mask); // suspends all signals except SIGCHLD, waits for this one
         counter2++;
     }
 
@@ -129,12 +132,13 @@ int master(int workers) {
         int var = worker_index; // # VAR = ID of worker
 
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
-        if (targetProblem == NULL || targetWorker == -1) {
+        if (targetProblem == NULL) {
             lastMove = 1;
-            // debug("PROBLEM IS NULL");
+            // debug("LAST MOVE --- Jumping to FINISHING");
             goto FINISHING;
         }
 
+        debug("Writing problem to Worker %d" , (int) targetWorker);
         FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
         writeProblem(targetProblem, fileInput);
         sf_send_problem(targetWorker, targetProblem);
@@ -143,50 +147,54 @@ int master(int workers) {
         kill(targetWorker, SIGCONT); // send worker the continue signal
         statesWorkers[worker_index] = WORKER_CONTINUED;
         sf_change_state(arrayPID[worker_index], WORKER_IDLE, WORKER_CONTINUED);
-        debug("Worker %d is now continued ", arrayPID[worker_index]);
+        // debug("Worker %d is now continued ", arrayPID[worker_index]);
+
+        // sigsuspend(&mask); // To receive SIGCHLD to go to Running
 
         if (statesWorkers[worker_index] == WORKER_CONTINUED) pause();
 
         FINISHING:
-            // debug("FINISHING");
-        for (int i = 0; i < workers; i++) {
-            if (statesWorkers[i] == WORKER_STOPPED) {
-                debug("Found Stopped Worker");
+            // debug("FINISHING PART OF MAIN LOOPS");
+            for (int finish_count = 0; finish_count < workers; finish_count++) {
+                if (statesWorkers[finish_count] == WORKER_STOPPED) {
+                    // debug("Found Stopped Worker");
 
-                // Get Details of the Worker
-                pid_t foundWorker = arrayPID[i];
-                int foundstoppedWorker_index = i;
+                    // Get Details of the Worker
+                    pid_t foundWorker = arrayPID[finish_count];
+                    int foundstoppedWorker_index = finish_count;
 
-                FILE *fileOutput = fdopen(workerTomaster_pipes[foundstoppedWorker_index][0], "r");
-                struct result *targetResult = readResult(fileOutput);
-                sf_recv_result(foundWorker, targetResult);
-                post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
-                free(targetResult);
+                    FILE *fileOutput = fdopen(workerTomaster_pipes[foundstoppedWorker_index][0], "r");
+                    struct result *targetResult = readResult(fileOutput);
+                    sf_recv_result(foundWorker, targetResult);
+                    post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
+                    free(targetResult);
 
-                // Set it to Worker IDLE
-                statesWorkers[worker_index] = WORKER_IDLE;
-                sf_change_state(arrayPID[worker_index], WORKER_STOPPED, WORKER_IDLE);
-                // debug("Worker changed from Stopped to IDLE");
-                break;
+                    // Set it to Worker IDLE
+                    statesWorkers[worker_index] = WORKER_IDLE;
+                    sf_change_state(arrayPID[worker_index], WORKER_STOPPED, WORKER_IDLE);
+                    // debug("Worker changed from Stopped to IDLE");
+                    break;
+                }
             }
-        }
 
         if (lastMove) break;
 
     } // end of while loop
 
-    // debug("Exited main loop");
+    debug("Exited main loop");
     int checkingWorkers = 0;
     while (checkingWorkers < workers) {
         if (statesWorkers[checkingWorkers] != WORKER_IDLE) {
             kill(arrayPID[checkingWorkers], SIGHUP); // don't think you need to change state.
             sf_cancel(arrayPID[checkingWorkers]); // cancel the workers that were sent SIGHUP
+            pause();
         }
         checkingWorkers++;
     }
 
     // Here, let's send all the workers SIGTERM signal
     for (int i = 0; i < workers; i++) {
+        debug("Sending CONT & TERM Signals");
         pid_t target = arrayPID[i];
         kill(target, SIGCONT);
         kill(target, SIGTERM);
@@ -288,8 +296,6 @@ void SIGCHLD_handler(void) {
 
     // int wstatus;
 
-    debug("Master's SIGCHLD handler invoked");
-
     // 1st: STARTED --> IDLE
     // 2nd: IDLE --> CONTINUED
     // 3rd: CONTINUED --> RUNNING
@@ -303,7 +309,7 @@ void SIGCHLD_handler(void) {
 
     while ((targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED)) != 0) {
     // targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED);
-
+    debug("Master's SIGCHLD handler invoked");
     // First, find the index for later finding status of targetPID
     for (int x = 0; x < workerReference; x++) {
         pid_t returnPID = arrayPID[x];
