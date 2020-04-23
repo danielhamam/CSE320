@@ -79,8 +79,8 @@ int master(int workers) {
             arrayPID[count2] = tempPID; // When PID == 0, it is child process (are we assuming the worker processes are running? Sent SIGSTOP)
             debug("Started to run parent process in fork");
 
-            // close(masterToworker_pipes[count2][0]); // parent writes to M2W, close read end
-            // close(workerTomaster_pipes[count2][1]); // parent reads from W2M, close write end
+            close(masterToworker_pipes[count2][0]); // parent writes to M2W, close read end
+            close(workerTomaster_pipes[count2][1]); // parent reads from W2M, close write end
 
             // changing state of WORKERS
             statesWorkers[count2] = WORKER_STARTED;
