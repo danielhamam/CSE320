@@ -208,6 +208,7 @@ int master(int workers) {
         pid_t target = arrayPID[i];
         kill(target, SIGCONT);
         kill(target, SIGTERM);
+        if (statesWorkers[i] != WORKER_EXITED) pause();
     }
 
     // Let's free all the stuff
