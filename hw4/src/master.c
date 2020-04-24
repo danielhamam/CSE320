@@ -74,7 +74,7 @@ int master(int workers) {
             dup2(workerTomaster_pipes[count2][1], STDOUT_FILENO); // child writes to W2M, make it stdout (READING END)
 
             // execute the worker program
-            execl("bin/polya_worker", "bin/polya_worker", NULL);
+            execl("bin/polya_worker", "", NULL);
 
         } // end of worker process running, would stop with SIGSTOP in worker
         else { // parent process
@@ -134,6 +134,7 @@ int master(int workers) {
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
         if (targetProblem == NULL) {
             // debug("PROBLEM IS NULL");
+            free(targetProblem);
             break; // it doesnt matter what state the workers are on, all problems are solved
         }
 
@@ -170,10 +171,12 @@ int master(int workers) {
                     struct result *targetResult = readResult(fileOutput);
                     sf_recv_result(foundWorker, targetResult);
                     int result = post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
+                    // free(targetProblem);
                     free(targetResult);
 
                     if (result == 0) { // aka if result is 0 (cancel all other workers running/solving)
                         // debug("Post Result = 0");
+                        free(targetProblem);
                         int checkingWorkers = 0;
                         while (checkingWorkers < workers) {
                             if (statesWorkers[checkingWorkers] == WORKER_CONTINUED || statesWorkers[checkingWorkers] == WORKER_RUNNING) {
@@ -196,17 +199,13 @@ int master(int workers) {
                     break;
 
                 } // end of IF STATEMENT for WORKER_STOPPED
-            }
+            } // end of FOR LOOP
 
         if (lastMove) break;
 
     } // end of while loop
 
-    debug("Exited main loop");
-
-    // sigset_t myMask;
-    // sigfillset(&myMask);
-    // sigdelset(&myMask, SIGCHLD);
+    // debug("Exited main loop");
 
     // Here, let's send all the workers SIGTERM signal
     for (int i = 0; i < workers; i++) {
@@ -329,9 +328,9 @@ void SIGCHLD_handler(void) {
     // 5th: STOPPED --> IDLE
     // 6th: IDLE --> EXITED
     // 7th: CAN ABORT AT ANY MOMENT
-    int wstatus;
-    pid_t targetPID;
-    int pidIndex;
+    int wstatus = 0;
+    pid_t targetPID = 0;
+    int pidIndex = 0;
 
     while ((targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED)) > 0) {
         // targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED);
