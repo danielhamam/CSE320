@@ -60,7 +60,7 @@ int master(int workers) {
         if (tempPID == -1) exit(EXIT_FAILURE);
         else if (tempPID == 0) {
 
-            debug("Forking worker %d ", (int) getpid());
+            // debug("Forking worker %d ", (int) getpid());
 
             // change file descriptors in CHILD PROCESS (read = 0, write = 1)
             close(masterToworker_pipes[count2][1]); // child reads from M2W, close write end
@@ -77,7 +77,7 @@ int master(int workers) {
         else { // parent process
 
             arrayPID[count2] = tempPID; // When PID == 0, it is child process (are we assuming the worker processes are running? Sent SIGSTOP)
-            debug("Started to run parent process in fork");
+            // debug("Started to run parent process in fork");
 
             close(masterToworker_pipes[count2][0]); // parent writes to M2W, close read end
             close(workerTomaster_pipes[count2][1]); // parent reads from W2M, close write end
@@ -95,18 +95,17 @@ int master(int workers) {
     // Let's wait for the workers to all be IDLE
     int counter2 = 0;
 
-    sigset_t old_mask;
+    // sigset_t old_mask;
     sigset_t new_mask;
     sigemptyset(&new_mask);
     sigaddset(&new_mask, SIGCHLD);
 
     sigset_t susMask;
-    sigfillset(&susMask);
-    sigdelset(&susMask, SIGCHLD);
+    sigemptyset(&susMask);
+    sigaddset(&susMask, SIGCHLD); // allowing all SIGNALS execpt SIGCHLD
 
     while (counter2 < workers) {
-        // pause();
-        sigsuspend(&susMask); // suspends all signals except SIGCHLD, waits for this one
+        if (statesWorkers[counter2] != WORKER_IDLE) pause(); // pause for SIGCHLD to go to IDLE
         counter2++;
     }
 
@@ -118,7 +117,7 @@ int master(int workers) {
         // pause here and make sure every WORKER PROCESS is idle before proceeding
 
         pid_t targetWorker = -1; // the worker that we send a problem to, if found (-1 if not found)
-        int worker_index;
+        int worker_index = -1;
 
         // for loop to search for idle worker, find a problem and send to worker
         for (int c = 0; c < workers; c++) {
@@ -132,18 +131,14 @@ int master(int workers) {
 
         if (targetWorker == -1) goto FINISHING;
 
-        // debug("Target IDLE Worker found is PID: %d ", targetWorker);
-        // debug("Worker Index is : %d ", worker_index);
-
         // STEP --> LETS GET THE PROBLEM
         int nvars = workers; // NVAR = # of workers,
         int var = worker_index; // # VAR = ID of worker
 
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
         if (targetProblem == NULL) {
-            lastMove = 1;
-            // debug("LAST MOVE --- Jumping to FINISHING");
-            goto FINISHING;
+            debug("PROBLEM IS NULL");
+            break; // it doesnt matter what state the workers are on, all problems are solved
         }
 
         // debug("Writing problem to Worker %d" , (int) targetWorker);
@@ -151,19 +146,12 @@ int master(int workers) {
         writeProblem(targetProblem, fileInput);
         sf_send_problem(targetWorker, targetProblem);
 
-        sigprocmask(SIG_BLOCK, &new_mask, &old_mask);
-
         // SEND CONTINUE SIGNAL to WORKER
         kill(targetWorker, SIGCONT); // send worker the continue signal
         statesWorkers[worker_index] = WORKER_CONTINUED;
         sf_change_state(arrayPID[worker_index], WORKER_IDLE, WORKER_CONTINUED);
-        // debug("Worker %d is now continued ", arrayPID[worker_index]);
 
-        sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
-
-        // sigsuspend(&mask); // To receive SIGCHLD to go to Running
-
-        if (statesWorkers[worker_index] == WORKER_CONTINUED) pause();
+        if (statesWorkers[worker_index] == WORKER_CONTINUED) pause();  // To receive SIGCHLD to go to Running
 
         FINISHING:
             // debug("FINISHING PART OF MAIN LOOPS");
@@ -180,20 +168,32 @@ int master(int workers) {
                     struct result *targetResult = readResult(fileOutput);
                     sf_recv_result(foundWorker, targetResult);
                     // debug("Current Problem For Post-Result: 'problem->size: %d' " , (int) targetProblem->size);
-                    post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
+                    int result = post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
                     free(targetResult);
+
+                    if (result == 0) { // aka if result is 0 (cancel all other workers running/solving)
+                        debug("Post Result = 0");
+                        int checkingWorkers = 0;
+                        while (checkingWorkers < workers) {
+                            if (statesWorkers[checkingWorkers] == WORKER_CONTINUED || statesWorkers[checkingWorkers] == WORKER_RUNNING) {
+                                kill(arrayPID[checkingWorkers], SIGHUP); // don't think you need to change state.
+                                sf_cancel(arrayPID[checkingWorkers]); // cancel the workers that were sent SIGHUP
+                                // pause();
+                                debug("CANCEL CANCEL CANCEL CANCEL");
+                            }
+                            checkingWorkers++;
+                        } // end of WHILE loop
+                    } // end of IF statement for result == 0
 
                     // sigprocmask(SIG_BLOCK, &new_mask, &old_mask);
 
-                    // Set it to Worker IDLE
-                    statesWorkers[worker_index] = WORKER_IDLE;
-                    sf_change_state(arrayPID[worker_index], WORKER_STOPPED, WORKER_IDLE);
-                    // debug("Worker changed from Stopped to IDLE");
-                    break;
+                    statesWorkers[finish_count] = WORKER_IDLE; // Set to IDLE
+                    sf_change_state(arrayPID[finish_count], WORKER_STOPPED, WORKER_IDLE);
 
                     // sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
+                    break;
 
-                }
+                } // end of IF STATEMENT for WORKER_STOPPED
             }
 
         if (lastMove) break;
@@ -201,15 +201,6 @@ int master(int workers) {
     } // end of while loop
 
     debug("Exited main loop");
-    int checkingWorkers = 0;
-    while (checkingWorkers < workers) {
-        if (statesWorkers[checkingWorkers] != WORKER_IDLE) {
-            kill(arrayPID[checkingWorkers], SIGHUP); // don't think you need to change state.
-            sf_cancel(arrayPID[checkingWorkers]); // cancel the workers that were sent SIGHUP
-            pause();
-        }
-        checkingWorkers++;
-    }
 
     // Here, let's send all the workers SIGTERM signal
     for (int i = 0; i < workers; i++) {
@@ -335,56 +326,55 @@ void SIGCHLD_handler(void) {
     pid_t targetPID;
     int pidIndex;
 
-    while ((targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED)) != 0) {
-    // targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED);
-    debug("Master's SIGCHLD handler invoked");
-    // First, find the index for later finding status of targetPID
-    for (int x = 0; x < workerReference; x++) {
-        pid_t returnPID = arrayPID[x];
-        if (returnPID == targetPID) { pidIndex = x; break; }
-    }
-    // now, find status of targetPID
-    int pidStatus = statesWorkers[pidIndex];
+    while ((targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED)) > 0) {
+        // targetPID = waitpid(-1, &wstatus, WUNTRACED | WNOHANG | WCONTINUED);
+        // debug("Master's SIGCHLD handler invoked");
+        // First, find the index for later finding status of targetPID
+        for (int x = 0; x < workerReference; x++) {
+            pid_t returnPID = arrayPID[x];
+            if (returnPID == targetPID) { pidIndex = x; break; }
+        }
+        // now, find status of targetPID
+        int pidStatus = statesWorkers[pidIndex];
 
-    // -------------------------------------------------------------------------------------------------------
-    // -------------------------------------------------------------------------------------------------------
-    //                                           SIGNAL HANDLER CONDITIONS
-    // -------------------------------------------------------------------------------------------------------
-    // -------------------------------------------------------------------------------------------------------
+        // -------------------------------------------------------------------------------------------------------
+        // -------------------------------------------------------------------------------------------------------
+        //                                           SIGNAL HANDLER CONDITIONS
+        // -------------------------------------------------------------------------------------------------------
+        // -------------------------------------------------------------------------------------------------------
 
-    // PROCESS: STARTED ------> to ------> IDLE
-    if (WIFSTOPPED(wstatus) != 0 && pidStatus == WORKER_STARTED) {
-        statesWorkers[pidIndex] = WORKER_IDLE;
-        sf_change_state(targetPID, pidStatus, WORKER_IDLE);
-        // debug("Worker process %d switched from STARTED to IDLE", (int) targetPID);
-    }
+        // PROCESS: STARTED ------> to ------> IDLE
+        if (WIFSTOPPED(wstatus) != 0 && pidStatus == WORKER_STARTED) {
+            statesWorkers[pidIndex] = WORKER_IDLE;
+            sf_change_state(targetPID, pidStatus, WORKER_IDLE);
+            // debug("Worker process %d switched from STARTED to IDLE", (int) targetPID);
+        }
 
-    // PROCESS: RUNNING ------> to ------> STOPPED
-    else if (WIFSTOPPED(wstatus) != 0) {
-        statesWorkers[pidIndex] = WORKER_STOPPED;
-        sf_change_state(targetPID, pidStatus, WORKER_STOPPED);
-        // debug("Worker process %d switched from RUNNING to STOPPED", (int) targetPID);
-    }
+        // PROCESS: RUNNING ------> to ------> STOPPED
+        else if (WIFSTOPPED(wstatus) != 0) {
+            statesWorkers[pidIndex] = WORKER_STOPPED;
+            sf_change_state(targetPID, pidStatus, WORKER_STOPPED);
+            // debug("Worker process %d switched from RUNNING to STOPPED", (int) targetPID);
+        }
 
-    // PROCESS: CONTINUED ------> to ------> RUNNING
-    else if (WIFCONTINUED(wstatus) != 0) {
-        statesWorkers[pidIndex] = WORKER_RUNNING;
-        sf_change_state(targetPID, pidStatus, WORKER_RUNNING);
-        // debug("Worker process %d switched from CONTINUED to RUNNING", (int) targetPID);
-    }
+        // PROCESS: CONTINUED ------> to ------> RUNNING
+        else if (WIFCONTINUED(wstatus) != 0) {
+            statesWorkers[pidIndex] = WORKER_RUNNING;
+            sf_change_state(targetPID, pidStatus, WORKER_RUNNING);
+            // debug("Worker process %d switched from CONTINUED to RUNNING", (int) targetPID);
+        }
 
-    // PROCESS: IDLE ------> to ------> EXITED
-    else if (WIFEXITED(wstatus) != 0) {
-        statesWorkers[pidIndex] = WORKER_EXITED;
-        sf_change_state(targetPID, pidStatus, WORKER_EXITED);
-        // debug("Worker process %d switched from IDLE to EXITED", (int) targetPID);
-    }
-    // PROCESS: SIGNAL ------> to ------> ABORTED
-    else {
-        statesWorkers[pidIndex] = WORKER_ABORTED;
-        sf_change_state(targetPID, pidStatus, WORKER_ABORTED);
-        // debug("Worker process %d has ABORTED", (int) targetPID);
-    }
-
+        // PROCESS: IDLE ------> to ------> EXITED
+        else if (WIFEXITED(wstatus) != 0) {
+            statesWorkers[pidIndex] = WORKER_EXITED;
+            sf_change_state(targetPID, pidStatus, WORKER_EXITED);
+            // debug("Worker process %d switched from IDLE to EXITED", (int) targetPID);
+        }
+        // PROCESS: SIGNAL ------> to ------> ABORTED
+        else {
+            statesWorkers[pidIndex] = WORKER_ABORTED;
+            sf_change_state(targetPID, pidStatus, WORKER_ABORTED);
+            // debug("Worker process %d has ABORTED", (int) targetPID);
+        }
     } // end of while loop
 }

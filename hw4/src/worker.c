@@ -35,7 +35,7 @@ int worker(void) {
         SIGHUP_CANCELLED = 0;
         raise(19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
 // ------------------------------------------------------------
-        // debug("Worker is running");
+        debug("Worker is running");
         struct problem *targetProblem = readProblem(stdin);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
         // debug("Found targetMethod");
@@ -46,7 +46,7 @@ int worker(void) {
             if (targetRESULT == NULL) { targetRESULT = create_failedResult(); }
         }
         SIGHUP_CANCELLED = 1; // can't change CHECK_FLAG from 1
-        // debug("Found result, before writing");
+        debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
         // free what you malloced
         free(targetProblem);
