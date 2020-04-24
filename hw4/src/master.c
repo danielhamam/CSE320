@@ -137,7 +137,7 @@ int master(int workers) {
 
         struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
         if (targetProblem == NULL) {
-            debug("PROBLEM IS NULL");
+            // debug("PROBLEM IS NULL");
             break; // it doesnt matter what state the workers are on, all problems are solved
         }
 
@@ -179,7 +179,7 @@ int master(int workers) {
                                 kill(arrayPID[checkingWorkers], SIGHUP); // don't think you need to change state.
                                 sf_cancel(arrayPID[checkingWorkers]); // cancel the workers that were sent SIGHUP
                                 // pause();
-                                debug("CANCEL CANCEL CANCEL CANCEL");
+                                // debug("CANCEL CANCEL CANCEL CANCEL");
                             }
                             checkingWorkers++;
                         } // end of WHILE loop
@@ -208,7 +208,7 @@ int master(int workers) {
 
     // Here, let's send all the workers SIGTERM signal
     for (int i = 0; i < workers; i++) {
-        debug("Sending CONT & TERM Signals");
+        // debug("Sending CONT & TERM Signals");
         pid_t target = arrayPID[i];
         kill(target, SIGCONT);
         kill(target, SIGTERM);
