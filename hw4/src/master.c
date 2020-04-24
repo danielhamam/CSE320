@@ -202,13 +202,17 @@ int master(int workers) {
 
     debug("Exited main loop");
 
+    // sigset_t myMask;
+    // sigfillset(&myMask);
+    // sigdelset(&myMask, SIGCHLD);
+
     // Here, let's send all the workers SIGTERM signal
     for (int i = 0; i < workers; i++) {
         debug("Sending CONT & TERM Signals");
         pid_t target = arrayPID[i];
         kill(target, SIGCONT);
         kill(target, SIGTERM);
-        if (statesWorkers[i] != WORKER_EXITED) pause();
+        while (statesWorkers[i] != WORKER_EXITED) pause();
     }
 
     // Let's free all the stuff
