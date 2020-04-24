@@ -35,7 +35,7 @@ int worker(void) {
         SIGHUP_CANCELLED = 0;
         raise(19); // SEND ITSELF SIGSTOP, AWAITS CONTINUE BY MASTER. (becomes idle when SIGSTOP SENDS)
 // ------------------------------------------------------------
-        debug("Worker is running");
+        // debug("Worker is running");
         struct problem *targetProblem = readProblem(stdin);
         struct solver_methods targetMethod = solvers[targetProblem->type]; // "used to invoke proper solver for each problem"
         // debug("Found targetMethod");
@@ -46,7 +46,7 @@ int worker(void) {
             if (targetRESULT == NULL) { targetRESULT = create_failedResult(); }
         }
         SIGHUP_CANCELLED = 1; // can't change CHECK_FLAG from 1
-        debug("Found result, before writing");
+        // debug("Found result, before writing");
         writeResult(targetRESULT, stdout);
         // free what you malloced
         free(targetProblem);
@@ -163,7 +163,7 @@ struct problem *readProblem(FILE *stream) {
         tempData++;
     }
 
-    debug("Problem: size: %ld, type: %d, id: %d, nvars: %d, var :%d ", read_problem->size, read_problem->type, read_problem->id, read_problem->nvars, read_problem->var);
+    // debug("Problem: size: %ld, type: %d, id: %d, nvars: %d, var :%d ", read_problem->size, read_problem->type, read_problem->id, read_problem->nvars, read_problem->var);
 
     fflush(stream);
 
@@ -174,7 +174,7 @@ struct problem *readProblem(FILE *stream) {
 void writeResult(struct result *selectedResult, FILE *out) {
 
     // debug("Result: size: %ld, id: %d, failed: %d ", selectedResult->size, selectedResult->id, (int) selectedResult->failed);
-    debug("Writing the result from the worker process");
+    // debug("Writing the result from the worker process");
 
     if (CHECK_FLAG == 1) {
         char *charPtr = (char * ) selectedResult;

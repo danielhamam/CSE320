@@ -29,6 +29,11 @@ int master(int workers) {
     workerReference = workers;
     signal(SIGCHLD, SIGCHLD_handler); // signal handler for SIGCHLD
 
+    // Block "any time the main program is actively involved in manipulating variables that are shared with a signal handler"
+    sigset_t susMask;
+    sigemptyset(&susMask);
+    sigaddset(&susMask, SIGCHLD); // allowing all SIGNALS execpt SIGCHLD
+
 // ---------------------------------------------------------------------------------------------------------------------------
 //                           INITIALIZE THE PROGRAM
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -60,8 +65,6 @@ int master(int workers) {
         if (tempPID == -1) exit(EXIT_FAILURE);
         else if (tempPID == 0) {
 
-            // debug("Forking worker %d ", (int) getpid());
-
             // change file descriptors in CHILD PROCESS (read = 0, write = 1)
             close(masterToworker_pipes[count2][1]); // child reads from M2W, close write end
             close(workerTomaster_pipes[count2][0]); // child writes to W2M, close read end
@@ -83,7 +86,9 @@ int master(int workers) {
             close(workerTomaster_pipes[count2][1]); // parent reads from W2M, close write end
 
             // changing state of WORKERS
+            sigprocmask(SIG_BLOCK, &susMask, NULL);
             statesWorkers[count2] = WORKER_STARTED;
+            sigprocmask(SIG_UNBLOCK, &susMask, NULL);
             sf_change_state(arrayPID[count2], 0, WORKER_STARTED); // changing the state to started (0 is init state)
         }
         count2++;
@@ -94,15 +99,6 @@ int master(int workers) {
 
     // Let's wait for the workers to all be IDLE
     int counter2 = 0;
-
-    // sigset_t old_mask;
-    sigset_t new_mask;
-    sigemptyset(&new_mask);
-    sigaddset(&new_mask, SIGCHLD);
-
-    sigset_t susMask;
-    sigemptyset(&susMask);
-    sigaddset(&susMask, SIGCHLD); // allowing all SIGNALS execpt SIGCHLD
 
     while (counter2 < workers) {
         if (statesWorkers[counter2] != WORKER_IDLE) pause(); // pause for SIGCHLD to go to IDLE
@@ -148,17 +144,23 @@ int master(int workers) {
 
         // SEND CONTINUE SIGNAL to WORKER
         kill(targetWorker, SIGCONT); // send worker the continue signal
+        // --------------------------------------------
+        sigprocmask(SIG_BLOCK, &susMask, NULL);
         statesWorkers[worker_index] = WORKER_CONTINUED;
+        sigprocmask(SIG_UNBLOCK, &susMask, NULL);
+        // ---------------------------------------------
         sf_change_state(arrayPID[worker_index], WORKER_IDLE, WORKER_CONTINUED);
 
-        if (statesWorkers[worker_index] == WORKER_CONTINUED) pause();  // To receive SIGCHLD to go to Running
+        if (statesWorkers[worker_index] == WORKER_CONTINUED) {
+            pause();  // To receive SIGCHLD to go to Running
+        }
 
         FINISHING:
             // debug("FINISHING PART OF MAIN LOOPS");
             for (int finish_count = 0; finish_count < workers; finish_count++) {
                 // if (statesWorkers[finish_count == WORKER_RUNNING]) pause();
                 if (statesWorkers[finish_count] == WORKER_STOPPED) { // the result can now be read
-                    debug("Found Stopped Worker");
+                    // debug("Found Stopped Worker");
 
                     // Get Details of the Worker
                     pid_t foundWorker = arrayPID[finish_count];
@@ -167,12 +169,11 @@ int master(int workers) {
                     FILE *fileOutput = fdopen(workerTomaster_pipes[foundstoppedWorker_index][0], "r");
                     struct result *targetResult = readResult(fileOutput);
                     sf_recv_result(foundWorker, targetResult);
-                    // debug("Current Problem For Post-Result: 'problem->size: %d' " , (int) targetProblem->size);
                     int result = post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
                     free(targetResult);
 
                     if (result == 0) { // aka if result is 0 (cancel all other workers running/solving)
-                        debug("Post Result = 0");
+                        // debug("Post Result = 0");
                         int checkingWorkers = 0;
                         while (checkingWorkers < workers) {
                             if (statesWorkers[checkingWorkers] == WORKER_CONTINUED || statesWorkers[checkingWorkers] == WORKER_RUNNING) {
@@ -186,8 +187,9 @@ int master(int workers) {
                     } // end of IF statement for result == 0
 
                     // sigprocmask(SIG_BLOCK, &new_mask, &old_mask);
-
+                    sigprocmask(SIG_BLOCK, &susMask, NULL);
                     statesWorkers[finish_count] = WORKER_IDLE; // Set to IDLE
+                    sigprocmask(SIG_UNBLOCK, &susMask, NULL);
                     sf_change_state(arrayPID[finish_count], WORKER_STOPPED, WORKER_IDLE);
 
                     // sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
@@ -227,7 +229,7 @@ int master(int workers) {
 // From master to worker
 void writeProblem(struct problem *selectedProblem, FILE *in) {
 
-    debug("Writing problem to Worker");
+    // debug("Writing problem to Worker");
 
     // Includes both header and data
     char *charPtr = (char *) selectedProblem;
@@ -246,7 +248,7 @@ void writeProblem(struct problem *selectedProblem, FILE *in) {
 
 struct result *readResult(FILE *out) {
 
-    debug("Reading result from Worker");
+    // debug("Reading result from Worker");
 
     // First, read the SIZE variable (know how much to malloc)
     size_t count_size = 0;
@@ -311,7 +313,7 @@ struct result *readResult(FILE *out) {
         tempData++;
     }
     fflush(out);
-    debug("Result: size: %d, id: %d, failed: %d, data-size: %d", (int) targetResult->size, (int) targetResult->id, (int) targetResult->failed, (int) countData);
+    // debug("Result: size: %d, id: %d, failed: %d, data-size: %d", (int) targetResult->size, (int) targetResult->id, (int) targetResult->failed, (int) countData);
     return targetResult;
 
 }
