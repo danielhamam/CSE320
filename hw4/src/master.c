@@ -62,8 +62,8 @@ int master(int workers) {
     // NOW, LET'S FORK INTO THE CHILD PROCESSES
     while (count2 < workers) {
         pid_t tempPID = fork();
-        if (tempPID == -1) exit(EXIT_FAILURE);
-        else if (tempPID == 0) {
+        // if (tempPID == -1) exit(EXIT_FAILURE);
+        if (tempPID == 0) {
 
             // change file descriptors in CHILD PROCESS (read = 0, write = 1)
             close(masterToworker_pipes[count2][1]); // child reads from M2W, close write end
@@ -232,12 +232,12 @@ void writeProblem(struct problem *selectedProblem, FILE *in) {
 
     // Includes both header and data
     char *charPtr = (char *) selectedProblem;
-    if (charPtr == NULL) return exit(EXIT_FAILURE);
+    // if (charPtr == NULL) return exit(EXIT_FAILURE);
     int countPtr = 0;
     int overallSize = selectedProblem->size;
     while (countPtr != overallSize) {
         // debug("WRITING A BYTE %d ", countPtr);
-        if (*charPtr == EOF) return exit(EXIT_FAILURE);
+        // if (*charPtr == EOF) break;
         fputc(*charPtr, in);
         charPtr++;
         countPtr++;
@@ -254,7 +254,7 @@ struct result *readResult(FILE *out) {
     unsigned int tempSize = 0;
     while (count_size < sizeof(size_t)) {
         unsigned int byte = fgetc(out);
-        if (byte == EOF) exit(EXIT_FAILURE);
+        // if (byte == EOF) break;;
         tempSize += byte;
         count_size++;
     }
@@ -311,7 +311,7 @@ struct result *readResult(FILE *out) {
         countData++;
         tempData++;
     }
-    fflush(out);
+    // fflush(out);
     // debug("Result: size: %d, id: %d, failed: %d, data-size: %d", (int) targetResult->size, (int) targetResult->id, (int) targetResult->failed, (int) countData);
     return targetResult;
 

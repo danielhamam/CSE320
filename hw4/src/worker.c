@@ -208,7 +208,7 @@ void SIGHUP_handler(void) {
     // cancel its current solution attempt
     // SIGHUP_CAL = 1;
     if (!SIGHUP_CANCELLED) CHECK_FLAG = 1;
-    debug("SIGHUP Handler invoked");
+    // debug("SIGHUP Handler invoked");
 }
 
 void SIGTERM_handler(void) {
