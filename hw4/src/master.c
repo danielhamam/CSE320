@@ -15,6 +15,7 @@ struct problem *generateProblem();
 void writeProblem(struct problem *problem, FILE *in);
 struct result *readResult(FILE *out);
 void SIGCHLD_handler();
+void freeItems();
 
 int workerReference; // to access as global variable
 
@@ -58,6 +59,8 @@ int master(int workers) {
 // ---------------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------------
 
+    sigprocmask(SIG_BLOCK, &susMask, NULL);
+
     int count2 = 0;
     // NOW, LET'S FORK INTO THE CHILD PROCESSES
     while (count2 < workers) {
@@ -86,13 +89,13 @@ int master(int workers) {
             close(workerTomaster_pipes[count2][1]); // parent reads from W2M, close write end
 
             // changing state of WORKERS
-            sigprocmask(SIG_BLOCK, &susMask, NULL);
             statesWorkers[count2] = WORKER_STARTED;
-            sigprocmask(SIG_UNBLOCK, &susMask, NULL);
             sf_change_state(arrayPID[count2], 0, WORKER_STARTED); // changing the state to started (0 is init state)
         }
         count2++;
     } // end of while loop
+
+    sigprocmask(SIG_UNBLOCK, &susMask, NULL);
 
 // ---------------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -106,6 +109,7 @@ int master(int workers) {
     }
 
     int lastMove = 0;
+    struct problem *targetProblem;
 
 // REPEATEDLY ASSIGNING PROBLEMS TO IDLE WORKERS AND POSTS RESULTS RECEIVED FROM WORKERS ( i think at this point, all workers should be idle )
     while (1) {
@@ -125,38 +129,41 @@ int master(int workers) {
             }
         }
 
-        if (targetWorker == -1) goto FINISHING;
+        if (targetWorker != -1) {
 
-        // STEP --> LETS GET THE PROBLEM
-        int nvars = workers; // NVAR = # of workers,
-        int var = worker_index; // # VAR = ID of worker
+            // STEP --> LETS GET THE PROBLEM
+            int nvars = workers; // NVAR = # of workers,
+            int var = worker_index; // # VAR = ID of worker
 
-        struct problem *targetProblem = get_problem_variant(nvars, var); // we not have our problem
-        if (targetProblem == NULL) {
-            // debug("PROBLEM IS NULL");
-            free(targetProblem);
-            break; // it doesnt matter what state the workers are on, all problems are solved
+            targetProblem = get_problem_variant(nvars, var); // we not have our problem
+            if (targetProblem == NULL) {
+                // debug("PROBLEM IS NULL");
+                free(targetProblem);
+                break; // it doesnt matter what state the workers are on, all problems are solved
+            }
+
+            // debug("Writing problem to Worker %d" , (int) targetWorker);
+            FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
+            writeProblem(targetProblem, fileInput);
+            sf_send_problem(targetWorker, targetProblem);
+
+            // SEND CONTINUE SIGNAL to WORKER
+            kill(targetWorker, SIGCONT); // send worker the continue signal
+            // --------------------------------------------
+            sigprocmask(SIG_BLOCK, &susMask, NULL);
+            statesWorkers[worker_index] = WORKER_CONTINUED;
+            // ---------------------------------------------
+            sf_change_state(arrayPID[worker_index], WORKER_IDLE, WORKER_CONTINUED);
+            sigprocmask(SIG_UNBLOCK, &susMask, NULL);
+
+            if (statesWorkers[worker_index] == WORKER_CONTINUED) {
+                pause();  // To receive SIGCHLD to go to Running
+            }
+
         }
 
-        // debug("Writing problem to Worker %d" , (int) targetWorker);
-        FILE *fileInput = fdopen(masterToworker_pipes[worker_index][1], "w");
-        writeProblem(targetProblem, fileInput);
-        sf_send_problem(targetWorker, targetProblem);
+        // Else, we just hop in this for loop
 
-        // SEND CONTINUE SIGNAL to WORKER
-        kill(targetWorker, SIGCONT); // send worker the continue signal
-        // --------------------------------------------
-        sigprocmask(SIG_BLOCK, &susMask, NULL);
-        statesWorkers[worker_index] = WORKER_CONTINUED;
-        sigprocmask(SIG_UNBLOCK, &susMask, NULL);
-        // ---------------------------------------------
-        sf_change_state(arrayPID[worker_index], WORKER_IDLE, WORKER_CONTINUED);
-
-        if (statesWorkers[worker_index] == WORKER_CONTINUED) {
-            pause();  // To receive SIGCHLD to go to Running
-        }
-
-        FINISHING:
             // debug("FINISHING PART OF MAIN LOOPS");
             for (int finish_count = 0; finish_count < workers; finish_count++) {
                 // if (statesWorkers[finish_count == WORKER_RUNNING]) pause();
@@ -189,13 +196,10 @@ int master(int workers) {
                         } // end of WHILE loop
                     } // end of IF statement for result == 0
 
-                    // sigprocmask(SIG_BLOCK, &new_mask, &old_mask);
-                    sigprocmask(SIG_BLOCK, &susMask, NULL);
                     statesWorkers[finish_count] = WORKER_IDLE; // Set to IDLE
                     sigprocmask(SIG_UNBLOCK, &susMask, NULL);
                     sf_change_state(arrayPID[finish_count], WORKER_STOPPED, WORKER_IDLE);
 
-                    // sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
                     break;
 
                 } // end of IF STATEMENT for WORKER_STOPPED
@@ -206,6 +210,11 @@ int master(int workers) {
     } // end of while loop
 
     // debug("Exited main loop");
+    sigset_t mask1;
+    sigfillset(&mask1);
+    sigdelset(&mask1, SIGCHLD);
+
+    sigprocmask(SIG_BLOCK, &mask1, NULL);
 
     // Here, let's send all the workers SIGTERM signal
     for (int i = 0; i < workers; i++) {
@@ -217,12 +226,16 @@ int master(int workers) {
     }
 
     // Let's free all the stuff
-    free((void *)statesWorkers);
-    free((void *)arrayPID);
+    freeItems();
 
+    sigprocmask(SIG_UNBLOCK, &mask1, NULL);
     sf_end();
     return EXIT_SUCCESS;
+}
 
+void freeItems() {
+    free((void *)statesWorkers);
+    free((void *)arrayPID);
 }
 
 // From master to worker
