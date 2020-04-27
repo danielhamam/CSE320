@@ -109,7 +109,8 @@ int master(int workers) {
     }
 
     int lastMove = 0;
-    struct problem *targetProblem;
+    struct problem *targetProblem = NULL;
+    // int firstTime = 0;
 
 // REPEATEDLY ASSIGNING PROBLEMS TO IDLE WORKERS AND POSTS RESULTS RECEIVED FROM WORKERS ( i think at this point, all workers should be idle )
     while (1) {
@@ -138,7 +139,7 @@ int master(int workers) {
             targetProblem = get_problem_variant(nvars, var); // we not have our problem
             if (targetProblem == NULL) {
                 // debug("PROBLEM IS NULL");
-                free(targetProblem);
+                // free(targetProblem);
                 break; // it doesnt matter what state the workers are on, all problems are solved
             }
 
@@ -176,11 +177,11 @@ int master(int workers) {
                     sf_recv_result(foundWorker, targetResult);
                     int result = post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
                     // free(targetProblem);
-                    // free(targetResult);
+                    free(targetResult);
 
                     if (result == 0) { // aka if result is 0 (cancel all other workers running/solving)
                         // debug("Post Result = 0");
-                        // free(targetProblem);
+                        free(targetProblem);
                         int checkingWorkers = 0;
                         while (checkingWorkers < workers) {
                             if (statesWorkers[checkingWorkers] == WORKER_CONTINUED || statesWorkers[checkingWorkers] == WORKER_RUNNING) {
@@ -225,6 +226,7 @@ int master(int workers) {
     freeItems();
 
     sigprocmask(SIG_UNBLOCK, &mask1, NULL);
+
     sf_end();
     return EXIT_SUCCESS;
 }

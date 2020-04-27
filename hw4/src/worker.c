@@ -50,7 +50,7 @@ int worker(void) {
         writeResult(targetRESULT, stdout);
         // free what you malloced
         free(targetProblem);
-        free(targetRESULT); // malloced in solver, so free now
+        // free(targetRESULT); // malloced in solver, so free now
 // ------------------------------------------------------------
     }
 
