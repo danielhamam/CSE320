@@ -150,11 +150,9 @@ int master(int workers) {
             // SEND CONTINUE SIGNAL to WORKER
             kill(targetWorker, SIGCONT); // send worker the continue signal
             // --------------------------------------------
-            sigprocmask(SIG_BLOCK, &susMask, NULL);
             statesWorkers[worker_index] = WORKER_CONTINUED;
-            // ---------------------------------------------
             sf_change_state(arrayPID[worker_index], WORKER_IDLE, WORKER_CONTINUED);
-            sigprocmask(SIG_UNBLOCK, &susMask, NULL);
+            // ---------------------------------------------
 
             if (statesWorkers[worker_index] == WORKER_CONTINUED) {
                 pause();  // To receive SIGCHLD to go to Running
@@ -179,11 +177,11 @@ int master(int workers) {
                     sf_recv_result(foundWorker, targetResult);
                     int result = post_result(targetResult, targetProblem); // will mark as "solved" if successful (aka no more variants of this type sent to problem)
                     // free(targetProblem);
-                    free(targetResult);
+                    // free(targetResult);
 
                     if (result == 0) { // aka if result is 0 (cancel all other workers running/solving)
                         // debug("Post Result = 0");
-                        free(targetProblem);
+                        // free(targetProblem);
                         int checkingWorkers = 0;
                         while (checkingWorkers < workers) {
                             if (statesWorkers[checkingWorkers] == WORKER_CONTINUED || statesWorkers[checkingWorkers] == WORKER_RUNNING) {
@@ -362,8 +360,14 @@ void SIGCHLD_handler(void) {
         // -------------------------------------------------------------------------------------------------------
         // -------------------------------------------------------------------------------------------------------
 
+        // PROCESS: CONTINUED ------> to ------> RUNNING
+        if (WIFCONTINUED(wstatus) != 0) {
+            statesWorkers[pidIndex] = WORKER_RUNNING;
+            sf_change_state(targetPID, pidStatus, WORKER_RUNNING);
+            // debug("Worker process %d switched from CONTINUED to RUNNING", (int) targetPID);
+        }
         // PROCESS: STARTED ------> to ------> IDLE
-        if (WIFSTOPPED(wstatus) != 0 && pidStatus == WORKER_STARTED) {
+        else if (WIFSTOPPED(wstatus) != 0 && pidStatus == WORKER_STARTED) {
             statesWorkers[pidIndex] = WORKER_IDLE;
             sf_change_state(targetPID, pidStatus, WORKER_IDLE);
             // debug("Worker process %d switched from STARTED to IDLE", (int) targetPID);
@@ -374,13 +378,6 @@ void SIGCHLD_handler(void) {
             statesWorkers[pidIndex] = WORKER_STOPPED;
             sf_change_state(targetPID, pidStatus, WORKER_STOPPED);
             // debug("Worker process %d switched from RUNNING to STOPPED", (int) targetPID);
-        }
-
-        // PROCESS: CONTINUED ------> to ------> RUNNING
-        else if (WIFCONTINUED(wstatus) != 0) {
-            statesWorkers[pidIndex] = WORKER_RUNNING;
-            sf_change_state(targetPID, pidStatus, WORKER_RUNNING);
-            // debug("Worker process %d switched from CONTINUED to RUNNING", (int) targetPID);
         }
 
         // PROCESS: IDLE ------> to ------> EXITED
