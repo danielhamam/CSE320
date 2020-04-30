@@ -12,8 +12,11 @@
 #include "pbx.h"
 #include "server.h"
 #include "debug.h"
+#include "adapted.h"
+// #include "csapp.c"
 
 static void terminate(int status);
+int createListenSocket(int port);
 
 /*
  * "PBX" telephone exchange simulation.
@@ -21,24 +24,52 @@ static void terminate(int status);
  * Usage: pbx <port>
  */
 int main(int argc, char* argv[]){
-    // Option processing should be performed here.
-    // Option '-p <port>' is required in order to specify the port number
-    // on which the server should listen.
 
+    // First: Option processing should be performed here. Option '-p <port>' is
+    // required in order to specify the port number on which the server should listen.
+
+    int flag, portNumber;
+
+    while((flag = getopt(argc, argv, "p:")) != EOF) {
+
+        switch(flag) {
+            case 'p':
+                portNumber = atoi(optarg++); // converts char to int
+                if (portNumber < 0) exit(EXIT_FAILURE);
+                break;
+        } // end of switch
+    } // end of while loop
+// ----------------------------------------------------------------------------------------------
+    debug("Port number: %d ", portNumber);
     // Perform required initialization of the PBX module.
     debug("Initializing PBX...");
     pbx = pbx_init();
 
-    // TODO: Set up the server socket and enter a loop to accept connections
+// ----------------------------------------------------------------------------------------------
+    // Second: Set Signal Handler for "SIGHUP" --> cleanly terminate
+    struct sigaction newAction;
+    newAction.sa_handler = terminate; // jump to terminate as signal handler
+    // newAction.sa_flags = SA_RESTART; /* Restart syscalls if possible */ // got from csapp.c
+    sigaction(SIGHUP, &newAction, NULL); // newAction = current act, NULL = old act
+// ----------------------------------------------------------------------------------------------
+
+    // Third: Set up the server socket and enter a loop to accept connections
     // on this socket.  For each connection, a thread should be started to
     // run function pbx_client_service().  In addition, you should install
     // a SIGHUP handler, so that receipt of SIGHUP will perform a clean
     // shutdown of the server.
 
-    fprintf(stderr, "You have to finish implementing main() "
-	    "before the PBX server will function.\n");
+    int serverSocketFD, infinite_loop = 1;
+    serverSocketFD =  open_listenfd(portNumber); // forms endpoint and returns file descriptor
+    // if (serverSocketFD < 0) exit(EXIT_FAILURE);
+    debug("SERVER: %d ", serverSocketFD);
+    terminate(0);
 
-    terminate(EXIT_FAILURE);
+    // Infinite loop because terminates when SIGHUP called
+    while(infinite_loop) {
+
+    }
+
 }
 
 /*
@@ -50,3 +81,16 @@ void terminate(int status) {
     debug("PBX server terminating");
     exit(status);
 }
+
+/*
+ * SIGHUP Handler to gracefully terminate the server
+ */
+
+void handler_SIGHUP() {
+    debug("SIGHUP Handler Invoked");
+    terminate(0); // EXIT_SUCCESS == 0;
+}
+
+/*
+ * Function called to open/return LISTENING socket on requested port
+ */
