@@ -155,13 +155,17 @@ int tu_pickup(TU *tu);
  *   If the TU was in the TU_RING_BACK state, then it goes to the TU_ON_HOOK state.
  *     In addition, in this case the calling TU (which is in the TU_RINGING state)
  *     simultaneously transitions to the TU_ON_HOOK state.
+ *   If the TU was in the TU_RINGING state, then it goes to the TU_ON_HOOK state.
+ *     In addition, in this case the called TU (which is in the TU_RING_BACK state)
+ *     simultaneously transitions to the TU_DIAL_TONE state.
  *   If the TU was in the TU_DIAL_TONE, TU_BUSY_SIGNAL, or TU_ERROR state,
  *     then it goes to the TU_ON_HOOK state.
  *   If the TU was in any other state, then there is no change of state.
  *
  * In all cases, a notification of the new state is sent to the network client
- * underlying this TU.  In addition, if the previous state was TU_CONNECTED or
- * TU_RING_BACK, then the peer or calling TU is also notified of its new state.
+ * underlying this TU.  In addition, if the previous state was TU_CONNECTED,
+ * TU_RING_BACK, or TU_RINGING, then the peer, called, or calling TU is also
+ * notified of its new state.
  *
  * @param tu  The tu that is to be hung up.
  * @return 0 if successful, -1 if any error occurs.  Note that "error" refers to
