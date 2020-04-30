@@ -49,7 +49,7 @@ int main(int argc, char* argv[]){
     // Second: Set Signal Handler for "SIGHUP" --> cleanly terminate
     struct sigaction newAction;
     newAction.sa_handler = terminate; // jump to terminate as signal handler
-    // newAction.sa_flags = SA_RESTART; /* Restart syscalls if possible */ // got from csapp.c
+    newAction.sa_flags = SA_RESTART; /* Restart syscalls if possible */ // got from csapp.c
     sigaction(SIGHUP, &newAction, NULL); // newAction = current act, NULL = old act
 // ----------------------------------------------------------------------------------------------
 
@@ -59,17 +59,26 @@ int main(int argc, char* argv[]){
     // a SIGHUP handler, so that receipt of SIGHUP will perform a clean
     // shutdown of the server.
 
+    // Variables for setting up server socket
     int serverSocketFD, infinite_loop = 1;
+    pthread_t threadID;
+    struct sockaddr_storage addressClient;
+    socklen_t lengthClient;
+
     serverSocketFD =  open_listenfd(portNumber); // forms endpoint and returns file descriptor
-    // if (serverSocketFD < 0) exit(EXIT_FAILURE);
-    debug("SERVER: %d ", serverSocketFD);
-    terminate(0);
+    if (serverSocketFD < 0) exit(EXIT_FAILURE);
 
     // Infinite loop because terminates when SIGHUP called
     while(infinite_loop) {
-
+        int acceptCheck = accept(serverSocketFD, (SA *) &addressClient, &lengthClient);
+        int *connectionFD = malloc(sizeof(int));
+        if (acceptCheck < 0) { free(connectionFD); exit(EXIT_FAILURE); } // check if not successful
+        else { // if successful
+            *connectionFD = acceptCheck;
+            int createCheck = pthread_create(&threadID, NULL, pbx_client_service, connectionFD);
+            if (createCheck != 0) exit(EXIT_FAILURE);
+        }
     }
-
 }
 
 /*
