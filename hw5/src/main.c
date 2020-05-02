@@ -13,10 +13,10 @@
 #include "server.h"
 #include "debug.h"
 #include "adapted.h"
-// #include "csapp.c"
 
 static void terminate(int status);
 int createListenSocket(int port);
+void handler_SIGHUP();
 
 /*
  * "PBX" telephone exchange simulation.
@@ -47,10 +47,9 @@ int main(int argc, char* argv[]){
 
 // ----------------------------------------------------------------------------------------------
     // Second: Set Signal Handler for "SIGHUP" --> cleanly terminate
-    struct sigaction newAction;
-    newAction.sa_handler = terminate; // jump to terminate as signal handler
-    newAction.sa_flags = SA_RESTART; /* Restart syscalls if possible */ // got from csapp.c
-    sigaction(SIGHUP, &newAction, NULL); // newAction = current act, NULL = old act
+    struct sigaction newFunctionality;
+    newFunctionality.sa_handler = handler_SIGHUP; // jump to terminate as signal handler
+    sigaction(SIGHUP, &newFunctionality, NULL); // newAction = current act, NULL = old act
 // ----------------------------------------------------------------------------------------------
 
     // Third: Set up the server socket and enter a loop to accept connections
@@ -99,7 +98,3 @@ void handler_SIGHUP() {
     debug("SIGHUP Handler Invoked");
     terminate(0); // EXIT_SUCCESS == 0;
 }
-
-/*
- * Function called to open/return LISTENING socket on requested port
- */
