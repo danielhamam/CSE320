@@ -13,7 +13,8 @@
 // Helper functions
 char *readMsg_Command(int fileDesc);
 char *readMsg_afterCommand(char *receivedCommand, int fileDesc);
-int processRequest(char *receivedCMD, char *received_afterCMD);
+int processRequest(char *receivedCMD, char *received_afterCMD, TU *target);
+int convertStr2Int(char *message);
 
 void *pbx_client_service(void *arg) {
 
@@ -27,16 +28,14 @@ void *pbx_client_service(void *arg) {
     if (detachCheck != 0) exit(EXIT_FAILURE);
 
     // "Register client FD with PBX module"
-    pbx_register(pbx, communicateFD);
+    TU *targetTU = pbx_register(pbx, communicateFD);
 
     // Now, thread enters so-called "Service Loop"
     int infinite_loop = 1;
     while (infinite_loop) {
         char *receivedCommand = readMsg_Command(communicateFD);
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFD);
-
-        processRequest(receivedCommand, receivedRest);
-
+        processRequest(receivedCommand, receivedRest, targetTU);
     }
     return NULL; // @return is NULL
 }
@@ -87,8 +86,25 @@ char *readMsg_afterCommand(char *receivedCommand, int fileDesc) {
     return receivedMessage;
 }
 
-int processRequest(char *receivedCMD, char *received_afterCMD) {
+int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
 
-    if ()
+    if (strcmp(receivedCMD, "pickup") == 0) { tu_pickup(targetTU); return 0; }
+    if (strcmp(receivedCMD, "hangup") == 0) { tu_hangup(targetTU); return 0; }
+    if (strcmp(receivedCMD, "dial") == 0) { tu_dial(targetTU, convertStr2Int(received_afterCMD)); return 0; }
+    if (strcmp(receivedCMD, "chat") == 0) { tu_chat(targetTU, received_afterCMD); return 0; }
 
+    return -1;
+
+}
+
+int convertStr2Int(char *message) {
+    int holdingInteger = 0;
+    while (*message != '\0') {
+        if (*message <= '0' || *message >= '9') return -1;
+        int newValue = *message - 48;
+        holdingInteger = holdingInteger * 10;
+        holdingInteger = holdingInteger + newValue;
+        message++;
+    }
+    return holdingInteger;
 }
