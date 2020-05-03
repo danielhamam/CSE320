@@ -62,13 +62,14 @@ char *readMsg_Command(FILE *communicateFILE) {
         if (byte == EOF) { exit(EXIT_FAILURE); }; // it's saying EOF before "\r\n".
         *tempMessage = byte;
         tempMessage++;
-        debug("Input: %c", byte);
+        // debug("Input: %c", byte);
         loopCount++;
     }
 
-    received_CMD = realloc(received_CMD,loopCount); // re-allocate to right size
+    *tempMessage = '\0';
+    received_CMD = realloc(received_CMD,loopCount + 1); // re-allocate to right size
 
-    // debug("The read command is: %s ", received_CMD);
+    debug("The read command is: %s!", received_CMD);
     return received_CMD;
 }
 
@@ -93,8 +94,9 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
         *tempMessage = byte;
         tempMessage++;
     }
-    // debug("The message is %s!", receivedMessage);
-    receivedMessage = realloc(receivedMessage, loopCount); // +1 for \0
+    *tempMessage = '\0';
+    debug("The message is %s!", receivedMessage);
+    receivedMessage = realloc(receivedMessage, loopCount + 1);
     return receivedMessage;
 }
 
@@ -106,3 +108,16 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
     if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); return 0; }
     return -1;
 }
+
+
+// #include "pbx.h" // holds declared functions
+
+/**
+ * TASK III: PBX Module
+ *
+ * This file implements the functions declared in pbx.h. This is basically the central
+ * module of the whole program. Holds a registry of connected clients and manages TU units.
+ *
+ */
+
+
