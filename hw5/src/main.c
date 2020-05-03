@@ -34,7 +34,7 @@ int main(int argc, char* argv[]){
 
         switch(flag) {
             case 'p':
-                portNumber = atoi(optarg++); // converts char to int
+                portNumber = convertStr2Int(optarg++); // converts char to int
                 if (portNumber < 0) exit(EXIT_FAILURE);
                 break;
             default:

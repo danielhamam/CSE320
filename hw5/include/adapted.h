@@ -31,13 +31,14 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-/********************************
- * Parts extracted from CSAPP.H
- ********************************/
+/*****************************************
+ * Parts extracted from CSAPP.H & My Own
+ *****************************************/
 
 typedef struct sockaddr SA;
 int open_clientfd(char *hostname, int port);
 int open_listenfd(int port);
+int convertStr2Int(char *message);
 
 /* External variables */
 extern int h_errno;    /* Defined by BIND for DNS errors */

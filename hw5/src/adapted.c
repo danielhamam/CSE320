@@ -8,6 +8,7 @@
  */
 
 #include "adapted.h"
+#include "debug.h"
 
 // -----------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------
@@ -66,4 +67,20 @@ int open_listenfd(int port)
     return -1;
     return listenfd;
 }
-/* $end open_listenfd */
+
+/*******************************
+ * Other Helper Functions I made
+ *******************************/
+
+int convertStr2Int(char *message) {
+    int holdingInteger = 0;
+    while (*message != '\0') {
+        if (*message < '0' || *message > '9') { debug("Yes, exit"); return -1; }
+        int newValue = *message - 48;
+        holdingInteger *= 10;
+        holdingInteger += newValue;
+        message++;
+    }
+    // debug("Integer: %d", holdingInteger);
+    return holdingInteger;
+}

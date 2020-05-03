@@ -38,14 +38,14 @@ void *pbx_client_service(void *arg) {
         char *receivedCommand = readMsg_Command(communicateFilePtr);
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
         int processCheck = processRequest(receivedCommand, receivedRest, targetTU);
-        if (processCheck == -1) debug("Server could not complete your request!");
+        if (processCheck == -1) exit(EXIT_FAILURE);
     }
     return NULL; // @return is NULL
 }
 
 char *readMsg_Command(FILE *communicateFILE) {
 
-    debug("Step 1: Reading command");
+    // debug("Step 1: Reading command");
 
     char *received_CMD = malloc(sizeof(char) * 300); // just to hold whatever message
 
@@ -57,8 +57,9 @@ char *readMsg_Command(FILE *communicateFILE) {
 
     while (byte != '\r' && byte != ' ') {
         unsigned int byte = fgetc(communicateFILE);
+        if (byte == '\n') continue;
         if (byte == '\r' || byte == ' ') break;
-        if (byte == EOF) { debug("EOF"); exit(EXIT_FAILURE); }; // it's saying EOF before "\r\n".
+        if (byte == EOF) { exit(EXIT_FAILURE); }; // it's saying EOF before "\r\n".
         *tempMessage = byte;
         tempMessage++;
         debug("Input: %c", byte);
@@ -67,15 +68,15 @@ char *readMsg_Command(FILE *communicateFILE) {
 
     received_CMD = realloc(received_CMD,loopCount); // re-allocate to right size
 
-    debug("The read command is: %s ", received_CMD);
+    // debug("The read command is: %s ", received_CMD);
     return received_CMD;
 }
 
 char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
-    if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) { debug("Command was pickup/hangup"); return " "; };
+    if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) return " ";
 
-    debug("Step 2: Reading message after command");
+    // debug("Step 2: Reading message after command");
 
     // FILE *communicateFILE = fdopen(fileDesc, "r"); // opened file descriptor
     char *receivedMessage = malloc(sizeof(char) * 300); // just to hold whatever message
@@ -92,31 +93,16 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
         *tempMessage = byte;
         tempMessage++;
     }
-    debug("The message is %s ", tempMessage);
-    receivedMessage = realloc(receivedMessage, loopCount);
-
+    // debug("The message is %s!", receivedMessage);
+    receivedMessage = realloc(receivedMessage, loopCount); // +1 for \0
     return receivedMessage;
 }
 
 int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
 
-    if (strncmp(receivedCMD, "pickup", 6) == 0) { debug("Processing PICKUP"); tu_pickup(targetTU); return 0; }
-    if (strncmp(receivedCMD, "hangup", 6) == 0) { debug("Processing HANGUP"); tu_hangup(targetTU); return 0; }
-    if (strncmp(receivedCMD, "dial", 4) == 0) { debug("Processing DIAL"); tu_dial(targetTU, convertStr2Int(received_afterCMD)); return 0; }
-    if (strncmp(receivedCMD, "chat", 4) == 0) { debug("Processing CHAT"); tu_chat(targetTU, received_afterCMD); return 0; }
-
+    if (strncmp(receivedCMD, "pickup", 6) == 0) { tu_pickup(targetTU); return 0; }
+    if (strncmp(receivedCMD, "hangup", 6) == 0) { tu_hangup(targetTU); return 0; }
+    if (strncmp(receivedCMD, "dial", 4) == 0) { tu_dial(targetTU, convertStr2Int(received_afterCMD)); return 0; }
+    if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); return 0; }
     return -1;
-}
-
-int convertStr2Int(char *message) {
-    int holdingInteger = 0;
-    while (*message != '\0') {
-        if (*message <= '0' || *message >= '9') return -1;
-        int newValue = *message - 48;
-        holdingInteger *= 10;
-        holdingInteger += newValue;
-        message++;
-    }
-    // debug("Integer: %d", holdingInteger);
-    return holdingInteger;
 }
