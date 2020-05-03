@@ -37,14 +37,15 @@ void *pbx_client_service(void *arg) {
     while (infinite_loop) {
         char *receivedCommand = readMsg_Command(communicateFilePtr);
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
-        processRequest(receivedCommand, receivedRest, targetTU);
+        int processCheck = processRequest(receivedCommand, receivedRest, targetTU);
+        if (processCheck == -1) debug("Server could not complete your request!");
     }
     return NULL; // @return is NULL
 }
 
 char *readMsg_Command(FILE *communicateFILE) {
 
-    debug("Reading command..........");
+    debug("Step 1: Reading command");
 
     char *received_CMD = malloc(sizeof(char) * 300); // just to hold whatever message
 
@@ -55,7 +56,6 @@ char *readMsg_Command(FILE *communicateFILE) {
     // char emptyChar = ' '; // there would be a space between command and referenced message.
 
     while (byte != '\r' && byte != ' ') {
-        debug("IN LOOP");
         unsigned int byte = fgetc(communicateFILE);
         if (byte == '\r' || byte == ' ') break;
         if (byte == EOF) { debug("EOF"); exit(EXIT_FAILURE); }; // it's saying EOF before "\r\n".
@@ -67,17 +67,15 @@ char *readMsg_Command(FILE *communicateFILE) {
 
     received_CMD = realloc(received_CMD,loopCount); // re-allocate to right size
 
-    debug("String : %s ", received_CMD );
+    debug("The read command is: %s ", received_CMD);
     return received_CMD;
 }
 
 char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
-    debug("Reading message AFTER command....");
-
     if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) { debug("Command was pickup/hangup"); return " "; };
 
-    debug("NOT PICKUP/HANGUP");
+    debug("Step 2: Reading message after command");
 
     // FILE *communicateFILE = fdopen(fileDesc, "r"); // opened file descriptor
     char *receivedMessage = malloc(sizeof(char) * 300); // just to hold whatever message
@@ -88,14 +86,13 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
     while (byte != '\r') {
         unsigned int byte = fgetc(communicateFILE);
-        debug("BYTE: %c ", byte);
         if (byte == '\r') break;
         if (byte == EOF) exit(EXIT_FAILURE);
         loopCount++;
         *tempMessage = byte;
         tempMessage++;
     }
-    debug("MSG AFTER COMMAND: %s ", tempMessage);
+    debug("The message is %s ", tempMessage);
     receivedMessage = realloc(receivedMessage, loopCount);
 
     return receivedMessage;
@@ -120,6 +117,6 @@ int convertStr2Int(char *message) {
         holdingInteger += newValue;
         message++;
     }
-    debug("Integer: %d ", holdingInteger);
+    // debug("Integer: %d", holdingInteger);
     return holdingInteger;
 }

@@ -37,6 +37,9 @@ int main(int argc, char* argv[]){
                 portNumber = atoi(optarg++); // converts char to int
                 if (portNumber < 0) exit(EXIT_FAILURE);
                 break;
+            default:
+                exit(EXIT_FAILURE);
+                break;
         } // end of switch
     } // end of while loop
 // ----------------------------------------------------------------------------------------------
