@@ -39,6 +39,7 @@ void *pbx_client_service(void *arg) {
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
         int processCheck = processRequest(receivedCommand, receivedRest, targetTU);
         if (processCheck == -1) exit(EXIT_FAILURE);
+        fflush(communicateFilePtr);
     }
     return NULL; // @return is NULL
 }
@@ -79,7 +80,6 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
     // debug("Step 2: Reading message after command");
 
-    // FILE *communicateFILE = fdopen(fileDesc, "r"); // opened file descriptor
     char *receivedMessage = malloc(sizeof(char) * 300); // just to hold whatever message
 
     int byte = 0;
@@ -97,6 +97,7 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
     *tempMessage = '\0';
     debug("The message is %s!", receivedMessage);
     receivedMessage = realloc(receivedMessage, loopCount + 1);
+    fflush(communicateFILE);
     return receivedMessage;
 }
 
@@ -109,7 +110,9 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
     return -1;
 }
 
+// Don't make PBX.C File yet, put this code back after you're done with server.c
 
+// #include <stdlib.h>
 // #include "pbx.h" // holds declared functions
 
 /**
@@ -120,4 +123,31 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
  *
  */
 
+/*********************************************************************************
+                         Variables/Functions/Structures Declared
+ *********************************************************************************/
 
+// // "Actual structure definitions LOCAL to  PBX module"
+// struct PBX {
+//     TU *clientUnit;
+// };
+
+// struct TU {
+//     int *clientExtension; // extension # = FD
+//     int *clientFD; // use FD to issue response to that Client
+// };
+
+// ********************************************************************************
+//                           All PBX Function DEFINITIONS
+//  ********************************************************************************
+
+// PBX *pbx_init() {
+//     pbx = malloc( (sizeof(int) * 2) * sizeof(PBX_MAX_EXTENSIONS)); // Two ints in TU and max extensions
+//     return pbx;
+// }
+
+// pbx_shutdown(PBX *pbx) {
+//     // Wait for threads to terminate
+//     // Shutdown all connections
+//     // Free Everything
+// }
