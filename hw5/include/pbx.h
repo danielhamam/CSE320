@@ -11,6 +11,7 @@
 #define PBX_H
 
 #include <unistd.h>
+#include <sys/select.h>
 
 /*
  * Structure types representing objects manipulated by the PBX module.
