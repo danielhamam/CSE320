@@ -29,7 +29,7 @@ typedef struct tu {
      int clientExtension; // extension # = FD
      int clientFD; // use FD to issue response to that Client
      int requestingTU_FD;
-     TU *clientConnectedTo;
+     TU *connected_ringing_PeerTU;
      TU_STATE clientState; // current state of the client
  } TU;
 
@@ -138,7 +138,7 @@ int tu_hangup(TU *tu) {
         writeStatetoTU(tu);
 
         // Change peer TU's state to Dial Tone
-        TU *peerTU = tu->clientConnectedTo;
+        TU *peerTU = tu->connected_ringing_PeerTU;
         peerTU->clientState = TU_DIAL_TONE;
         writeStatetoTU(peerTU);
 
@@ -149,7 +149,7 @@ int tu_hangup(TU *tu) {
         writeStatetoTU(tu);
 
         // Change peer TU's state to ON HOOK
-        TU *peerTU = tu->clientConnectedTo;
+        TU *peerTU = tu->connected_ringing_PeerTU;
         peerTU->clientState = TU_ON_HOOK;
         writeStatetoTU(peerTU);
     }
@@ -159,7 +159,7 @@ int tu_hangup(TU *tu) {
         writeStatetoTU(tu);
 
         // Change peer TU's state to Dial Tone
-        TU *peerTU = tu->clientConnectedTo;
+        TU *peerTU = tu->connected_ringing_PeerTU;
         peerTU->clientState = TU_DIAL_TONE;
         writeStatetoTU(peerTU);
     }
@@ -198,10 +198,13 @@ int tu_dial(TU *tu, int ext) {
         if (dialedTU == TU_ON_HOOK) {
             // Calling TU transitions to Ring Back
             tu->clientState = TU_RING_BACK;
+            tu->connected_ringing_PeerTU = dialedTU;
             writeStatetoTU(tu);
 
             // Dialed TU transitions to RINGING
             dialedTU->clientState = TU_RINGING;
+            dialedTU->requestingTU_FD = tu->clientFD; // This is the FD of the TU that's calling
+            dialedTU->connected_ringing_PeerTU = tu;
             writeStatetoTU(dialedTU); // "extension also notified of its new state"
         }
         else {
@@ -215,6 +218,12 @@ int tu_dial(TU *tu, int ext) {
 }
 
 int tu_chat(TU *tu, char *msg) {
+
+    if (tu == NULL || tu->clientState != TU_CONNECTED) return -1;
+
+    // Assume it's connected, now send messages
+
+
     return 0;
 }
 
