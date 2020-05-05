@@ -121,8 +121,15 @@ int tu_pickup(TU *tu) {
     }
     // Case 2: RINGING --> CONNECTED
     else if (tu->clientState == TU_RINGING) {
+
+        // Transition to Connected
         tu->clientState = TU_CONNECTED;
-        writeStatetoFD(tu, tu->requestingTU_FD); // Calling TU also notified of new state
+        writeStatetoTU(tu);
+
+        // Calling TU also transitions to Connected
+        TU *dialingTU = tu->connected_ringing_PeerTU;
+        dialingTU->clientState = TU_CONNECTED;
+        writeStatetoTU(dialingTU);
         return 0;
     }
     else { writeStatetoTU(tu); return 0; }
@@ -181,7 +188,7 @@ int tu_dial(TU *tu, int ext) {
 
     // Check if extension is valid:
     for (int i = 0; i < PBX_MAX_EXTENSIONS; i++) {
-        TU *searchedTU = pbx->clientUnits[i];
+        searchedTU = pbx->clientUnits[i];
         if (pbx->clientUnits[i] == NULL) break;
         if (searchedTU->clientExtension == ext) { noneFound = 0; break; } // we found one
     }
@@ -202,7 +209,7 @@ int tu_dial(TU *tu, int ext) {
             return 0;
         }
 
-        if (dialedTU == TU_ON_HOOK) {
+        if (dialedTU->clientState == TU_ON_HOOK) {
             // Calling TU transitions to Ring Back
             tu->clientState = TU_RING_BACK;
             tu->connected_ringing_PeerTU = dialedTU;
@@ -231,6 +238,7 @@ int tu_chat(TU *tu, char *msg) {
     // Assume it's connected, now send messages
     TU *peerTU = tu->connected_ringing_PeerTU;
     write(peerTU->clientFD, msg, strlen(msg));
+    write(peerTU->clientFD, "\n", 1);
     return 0;
 }
 
