@@ -222,8 +222,8 @@ int tu_chat(TU *tu, char *msg) {
     if (tu == NULL || tu->clientState != TU_CONNECTED) return -1;
 
     // Assume it's connected, now send messages
-
-
+    TU *peerTU = tu->connected_ringing_PeerTU;
+    write(peerTU->clientFD, msg, strlen(msg));
     return 0;
 }
 
