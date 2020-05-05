@@ -172,6 +172,45 @@ int tu_hangup(TU *tu) {
 }
 
 int tu_dial(TU *tu, int ext) {
+
+    if (tu == NULL) return -1;
+
+    // Variables
+    int noneFound = 1; // 1 if true
+    TU *searchedTU = NULL;
+
+    // Check if extension is valid:
+    for (int i = 0; i < PBX_MAX_EXTENSIONS; i++) {
+        TU *searchedTU = pbx->clientUnits[i];
+        if (pbx->clientUnits[i] == NULL) break;
+        if (searchedTU->clientExtension == ext) { noneFound = 0; break; } // we found one
+    }
+
+    // If none found, ERROR transition
+    if (noneFound == 1) {
+        tu->clientState = TU_ERROR;
+        writeStatetoTU(tu);
+    }
+    TU *dialedTU = searchedTU;
+    // If found and TU was in TU_DIAL_TONE state
+    if (noneFound == 0 && tu->clientState == TU_DIAL_TONE) {
+
+        if (dialedTU == TU_ON_HOOK) {
+            // Calling TU transitions to Ring Back
+            tu->clientState = TU_RING_BACK;
+            writeStatetoTU(tu);
+
+            // Dialed TU transitions to RINGING
+            dialedTU->clientState = TU_RINGING;
+            writeStatetoTU(dialedTU); // "extension also notified of its new state"
+        }
+        else {
+            // If not ON HOOK, calling TU to BUSY SIGNAL (no change to dialed extension)
+            tu->clientState = TU_BUSY_SIGNAL;
+            writeStatetoTU(tu); // write state it self
+        }
+    }
+    else writeStatetoTU(tu); // no state change
     return 0;
 }
 
