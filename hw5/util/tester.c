@@ -88,14 +88,14 @@ double action_probs[NUM_STATES][NUM_COMMANDS] = {
 int next_states[NUM_STATES][NUM_COMMANDS] = {
   [TU_ON_HOOK] {
       1<<TU_DIAL_TONE | 1<<(TU_RINGING+RESYNC) | 1<<(TU_ON_HOOK+RESYNC),    // TU_PICKUP_CMD
-      1<<TU_ON_HOOK | 1<<(TU_RINGING+RESYNC) | 1<<(TU_ON_HOOK+RESYNC),      // TU_HANGUP_CMD
-      1<<TU_ON_HOOK | 1<<(TU_RINGING+RESYNC) | 1<<(TU_ON_HOOK+RESYNC),      // TU_DIAL_CMD
-      1<<TU_ON_HOOK | 1<<TU_RINGING | 1<<(TU_ON_HOOK+RESYNC),               // TU_CHAT_CMD
-      1<<TU_ON_HOOK | 1<<TU_RINGING | 1<<(TU_ON_HOOK+RESYNC)                // DELAY
+      1<<TU_ON_HOOK | 1<<(TU_RINGING+RESYNC),                               // TU_HANGUP_CMD
+      1<<TU_ON_HOOK | 1<<(TU_RINGING+RESYNC),                               // TU_DIAL_CMD
+      1<<TU_ON_HOOK | 1<<TU_RINGING,                                        // TU_CHAT_CMD
+      1<<TU_ON_HOOK | 1<<TU_RINGING                                         // DELAY
   },
   [TU_RINGING] {
       1<<TU_CONNECTED | 1<<(TU_ON_HOOK+RESYNC) | 1<<(TU_RINGING+RESYNC),    // TU_PICKUP_CMD
-      1<<TU_RINGING | 1<<(TU_ON_HOOK+RESYNC),                               // TU_HANGUP_CMD
+      1<<TU_RINGING | 1<<TU_ON_HOOK,                                        // TU_HANGUP_CMD
       1<<TU_RINGING | 1<<(TU_ON_HOOK+RESYNC),                               // TU_DIAL_CMD
       1<<TU_RINGING | 1<<TU_ON_HOOK,                                        // TU_CHAT_CMD
       1<<TU_RINGING | 1<<TU_ON_HOOK                                         // DELAY
