@@ -38,7 +38,7 @@ void *pbx_client_service(void *arg) {
         char *receivedCommand = readMsg_Command(communicateFilePtr);
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
         int processCheck = processRequest(receivedCommand, receivedRest, targetTU);
-        if (processCheck == -1) exit(EXIT_FAILURE);
+        if (processCheck == -1) continue;
         fflush(communicateFilePtr);
         // free(readMsg_Command);
         // free(readMsg_afterCommand);

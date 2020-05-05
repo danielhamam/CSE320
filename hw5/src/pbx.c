@@ -176,7 +176,7 @@ int tu_dial(TU *tu, int ext) {
     if (tu == NULL) return -1;
 
     // Variables
-    int noneFound = 1; // 1 if true
+    int noneFound = 1; // 1 if NO TU WITH THAT EXTENSION FOUND
     TU *searchedTU = NULL;
 
     // Check if extension is valid:
@@ -190,10 +190,17 @@ int tu_dial(TU *tu, int ext) {
     if (noneFound == 1) {
         tu->clientState = TU_ERROR;
         writeStatetoTU(tu);
+        return 0;
     }
     TU *dialedTU = searchedTU;
     // If found and TU was in TU_DIAL_TONE state
     if (noneFound == 0 && tu->clientState == TU_DIAL_TONE) {
+
+        if (ext == tu->clientFD) { // it's the same number, and it's DIAL_TONE
+            tu->clientState = TU_BUSY_SIGNAL;
+            writeStatetoTU(tu);
+            return 0;
+        }
 
         if (dialedTU == TU_ON_HOOK) {
             // Calling TU transitions to Ring Back
