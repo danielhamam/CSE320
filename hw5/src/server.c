@@ -40,6 +40,8 @@ void *pbx_client_service(void *arg) {
         int processCheck = processRequest(receivedCommand, receivedRest, targetTU);
         if (processCheck == -1) exit(EXIT_FAILURE);
         fflush(communicateFilePtr);
+        // free(readMsg_Command);
+        // free(readMsg_afterCommand);
     }
     return NULL; // @return is NULL
 }
@@ -66,11 +68,11 @@ char *readMsg_Command(FILE *communicateFILE) {
         // debug("Input: %c", byte);
         loopCount++;
     }
-
+    // if (byte == '\r') debug("RETURNED DONE");
     *tempMessage = '\0';
     received_CMD = realloc(received_CMD,loopCount + 1); // re-allocate to right size
 
-    debug("The read command is: %s!", received_CMD);
+    // debug("The read command is: %s!", received_CMD);
     return received_CMD;
 }
 
@@ -88,16 +90,14 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
     while (byte != '\r') {
         unsigned int byte = fgetc(communicateFILE);
-        if (byte == '\r') break;
+        if (byte == '\r' || byte == '\n') break;
         if (byte == EOF) exit(EXIT_FAILURE);
         loopCount++;
         *tempMessage = byte;
         tempMessage++;
     }
-    *tempMessage = '\0';
-    debug("The message is %s!", receivedMessage);
-    receivedMessage = realloc(receivedMessage, loopCount + 1);
-    fflush(communicateFILE);
+    // debug("The message is %s!", receivedMessage);
+    receivedMessage = realloc(receivedMessage, loopCount);
     return receivedMessage;
 }
 
@@ -109,45 +109,3 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
     if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); return 0; }
     return -1;
 }
-
-// Don't make PBX.C File yet, put this code back after you're done with server.c
-
-// #include <stdlib.h>
-// #include "pbx.h" // holds declared functions
-
-/**
- * TASK III: PBX Module
- *
- * This file implements the functions declared in pbx.h. This is basically the central
- * module of the whole program. Holds a registry of connected clients and manages TU units.
- *
- */
-
-/*********************************************************************************
-                         Variables/Functions/Structures Declared
- *********************************************************************************/
-
-// // "Actual structure definitions LOCAL to  PBX module"
-// struct PBX {
-//     TU *clientUnit;
-// };
-
-// struct TU {
-//     int *clientExtension; // extension # = FD
-//     int *clientFD; // use FD to issue response to that Client
-// };
-
-// ********************************************************************************
-//                           All PBX Function DEFINITIONS
-//  ********************************************************************************
-
-// PBX *pbx_init() {
-//     pbx = malloc( (sizeof(int) * 2) * sizeof(PBX_MAX_EXTENSIONS)); // Two ints in TU and max extensions
-//     return pbx;
-// }
-
-// pbx_shutdown(PBX *pbx) {
-//     // Wait for threads to terminate
-//     // Shutdown all connections
-//     // Free Everything
-// }
