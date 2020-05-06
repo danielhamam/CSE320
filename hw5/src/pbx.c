@@ -200,6 +200,11 @@ int tu_dial(TU *tu, int ext) {
 
     if (tu == NULL) return -1;
 
+    if (tu->clientState != TU_DIAL_TONE) {
+        writeStatetoTU(tu);
+        return 0;
+    }
+
     // Variables
     int noneFound = 1; // 1 if NO TU WITH THAT EXTENSION FOUND
     TU *searchedTU = NULL;
