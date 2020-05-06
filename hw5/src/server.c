@@ -43,6 +43,8 @@ void *pbx_client_service(void *arg) {
         // free(readMsg_Command);
         // free(readMsg_afterCommand);
     }
+
+    pbx_unregister(pbx, targetTU);
     return NULL; // @return is NULL
 }
 

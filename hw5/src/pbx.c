@@ -1,6 +1,8 @@
 // Don't make PBX.C File yet, put this code back after you're done with server.c
 
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <semaphore.h> // for mulithreading waits
 #include "pbx.h" // holds declared functions
 #include "debug.h" // for debug statements
 #include "string.h" // for strlen()
@@ -33,13 +35,16 @@ typedef struct tu {
      TU_STATE clientState; // current state of the client
  } TU;
 
+ sem_t modularSemaphore;
+ int semCounter = 1;
+
 // ********************************************************************************
 //                           All PBX Function DEFINITIONS
 //  ********************************************************************************
 
 PBX *pbx_init() {
-     // pbx = malloc( (sizeof(int) * 2) * sizeof(PBX_MAX_EXTENSIONS)); // Two ints in TU and max extensions
-     pbx = malloc(sizeof(PBX));
+     sem_init(&modularSemaphore, 0, semCounter);
+     pbx = malloc(sizeof(PBX));  // basically allocating max extensions
      return pbx;
  }
 
@@ -47,6 +52,16 @@ void pbx_shutdown(PBX *pbx) {
      // Wait for threads to terminate
      // Shutdown all connections
      // Free Everything
+
+    // Wait for everthing to unregister
+    for (int i = 0; i < PBX_MAX_EXTENSIONS; i++) {
+        TU *currentTU = pbx->clientUnits[i];
+        shutdown(currentTU->clientFD, 2); // 2 is SHUT_RDWR
+    }
+
+    // Free PBX.
+    free(pbx);
+
     return;
 }
 
@@ -88,6 +103,7 @@ int pbx_unregister(PBX *pbx, TU *tu) {
         TU *removeTU = pbx->clientUnits[removeCount];
         if (removeTU == NULL) return -1; // TU wasn't found (1)
         if (removeTU == tu) { foundRemoveTU = 1; break; }
+        removeCount++;
     }
     if (foundRemoveTU == 1) {
         pbx->clientUnits[removeCount] = NULL; // Remove from array list
@@ -190,8 +206,8 @@ int tu_dial(TU *tu, int ext) {
 
     // Check if extension is valid:
     for (int i = 0; i < PBX_MAX_EXTENSIONS; i++) {
+        if (pbx->clientUnits[i] == NULL) continue;
         searchedTU = pbx->clientUnits[i];
-        if (pbx->clientUnits[i] == NULL) break;
         if (searchedTU->clientExtension == ext) { noneFound = 0; break; } // we found one
     }
 
