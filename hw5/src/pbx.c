@@ -129,6 +129,8 @@ int tu_pickup(TU *tu) {
         // Calling TU also transitions to Connected
         TU *dialingTU = tu->connected_ringing_PeerTU;
         dialingTU->clientState = TU_CONNECTED;
+        dialingTU->connected_ringing_PeerTU = tu;
+        dialingTU->requestingTU_FD = tu->clientFD;
         writeStatetoTU(dialingTU);
         return 0;
     }
@@ -239,6 +241,10 @@ int tu_chat(TU *tu, char *msg) {
     TU *peerTU = tu->connected_ringing_PeerTU;
     write(peerTU->clientFD, msg, strlen(msg));
     write(peerTU->clientFD, "\n", 1);
+
+    // Print out current connection state
+    writeStatetoTU(tu);
+
     return 0;
 }
 
@@ -251,8 +257,17 @@ int tu_chat(TU *tu, char *msg) {
 
 void writeStatetoTU(TU *tu) {
 
-    write(tu->clientFD, tu_state_names[tu->clientState], strlen(tu_state_names[tu->clientState])); // Write "ON HOOK" to file descriptor
-    if (tu->clientState == TU_ON_HOOK || tu->clientState == TU_CONNECTED) {
+    write(tu->clientFD, tu_state_names[tu->clientState], strlen(tu_state_names[tu->clientState])); // Writing String of Command to the FD
+
+    if (tu->clientState == TU_CONNECTED) {
+
+        // TU *otherTU = tu->connected_ringing_PeerTU;
+        char space[] = " "; write(tu->clientFD, space, 1); // Write SPACE to file descriptor
+        char intHolder[10] = "";  // Write in the INTEGER to file descriptor
+        sprintf(intHolder, "%d", tu->requestingTU_FD);
+        write(tu->clientFD, intHolder, strlen(intHolder));
+    }
+    else if (tu->clientState == TU_ON_HOOK) {
         char space[] = " "; write(tu->clientFD, space, 1); // Write SPACE to file descriptor
         char intHolder[10] = "";  // Write in the INTEGER to file descriptor
         sprintf(intHolder, "%d", tu->clientFD);
