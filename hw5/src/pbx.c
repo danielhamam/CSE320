@@ -235,7 +235,12 @@ int tu_dial(TU *tu, int ext) {
 
 int tu_chat(TU *tu, char *msg) {
 
-    if (tu == NULL || tu->clientState != TU_CONNECTED) return -1;
+    if (tu == NULL) return -1;
+
+    if(tu->clientState != TU_CONNECTED) {
+        writeStatetoTU(tu);
+        return -1;
+    }
 
     // Assume it's connected, now send messages
     TU *peerTU = tu->connected_ringing_PeerTU;
