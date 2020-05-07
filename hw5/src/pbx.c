@@ -243,6 +243,7 @@ int tu_dial(TU *tu, int ext) {
     debug("Waiting P ==> DIAL");
 
     if (tu == NULL) { pthread_mutex_unlock(&modularMutex); return -1; }
+    if (ext < 4) { debug("less than 0"); pthread_mutex_unlock(&modularMutex); return -1; }
 
     if (tu->clientState != TU_DIAL_TONE) {
         writeStatetoTU(tu);
@@ -313,6 +314,12 @@ int tu_chat(TU *tu, char *msg) {
 
     if (tu == NULL) { return -1; }
 
+    if (msg == NULL) {
+        writeStatetoTU(tu);
+        pthread_mutex_unlock(&modularMutex);
+        return -1;
+    }
+
     if(tu->clientState != TU_CONNECTED) {
         writeStatetoTU(tu);
         pthread_mutex_unlock(&modularMutex);
@@ -321,6 +328,8 @@ int tu_chat(TU *tu, char *msg) {
 
     // Assume it's connected, now send messages
     TU *peerTU = tu->connected_ringing_PeerTU;
+    char premsg[] = "CHAT ";
+    write(peerTU->clientFD, premsg, strlen(premsg));
     write(peerTU->clientFD, msg, strlen(msg));
     write(peerTU->clientFD, "\n", 1);
 
@@ -339,7 +348,7 @@ int tu_chat(TU *tu, char *msg) {
 
 void writeStatetoTU(TU *tu) {
 
-    sem_wait(&tu->unitSem);
+    // sem_wait(&tu->unitSem);
 
     write(tu->clientFD, tu_state_names[tu->clientState], strlen(tu_state_names[tu->clientState])); // Writing String of Command to the FD
     // dprintf(tu->clientFD, "%s ", tu_state_names[tu->clientState]);
@@ -367,7 +376,7 @@ void writeStatetoTU(TU *tu) {
     write(tu->clientFD, "\n", 1); // Write a \n (new line) to file descriptor
     // dprintf(tu->clientFD, "\n");
     // return;
-    sem_post(&tu->unitSem);
+    // sem_post(&tu->unitSem);
 }
 
 /*

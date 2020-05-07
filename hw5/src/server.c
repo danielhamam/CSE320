@@ -39,7 +39,7 @@ void *pbx_client_service(void *arg) {
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
         int processCheck = processRequest(receivedCommand, receivedRest, targetTU);
         if (processCheck == -1) continue;
-        // fflush(communicateFilePtr);
+        fflush(communicateFilePtr);
         // free(readMsg_Command);
         // free(readMsg_afterCommand);
     }
@@ -83,8 +83,6 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
     if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) return " ";
 
-    // debug("Step 2: Reading message after command");
-
     char *receivedMessage = malloc(sizeof(char) * 300); // just to hold whatever message
 
     int byte = 0;
@@ -93,13 +91,14 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
     while (byte != '\r') {
         unsigned int byte = fgetc(communicateFILE);
+        if (byte == '\n' && loopCount == 0) { free(receivedMessage); return NULL; }
         if (byte == '\r' || byte == '\n') break;
         if (byte == EOF) exit(EXIT_FAILURE);
         loopCount++;
         *tempMessage = byte;
         tempMessage++;
     }
-    // debug("The message is %s!", receivedMessage);
+    debug("The message is %s!", receivedMessage);
     receivedMessage = realloc(receivedMessage, loopCount);
     return receivedMessage;
 }
@@ -108,7 +107,9 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
 
     if (strncmp(receivedCMD, "pickup", 6) == 0) { tu_pickup(targetTU); return 0; }
     if (strncmp(receivedCMD, "hangup", 6) == 0) { tu_hangup(targetTU); return 0; }
-    if (strncmp(receivedCMD, "dial", 4) == 0) { tu_dial(targetTU, convertStr2Int(received_afterCMD)); return 0; }
+    if (strncmp(receivedCMD, "dial", 4) == 0) {
+        if (received_afterCMD != NULL) tu_dial(targetTU, convertStr2Int(received_afterCMD));
+        return 0; }
     if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); return 0; }
     return -1;
 }
