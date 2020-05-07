@@ -39,12 +39,13 @@ void *pbx_client_service(void *arg) {
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
         int processCheck = processRequest(receivedCommand, receivedRest, targetTU);
         if (processCheck == -1) continue;
-        fflush(communicateFilePtr);
+        // fflush(communicateFilePtr);
         // free(readMsg_Command);
         // free(readMsg_afterCommand);
     }
 
     pbx_unregister(pbx, targetTU);
+    debug("Unregistering");
     return NULL; // @return is NULL
 }
 

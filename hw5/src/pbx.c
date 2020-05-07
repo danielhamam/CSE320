@@ -34,6 +34,7 @@ typedef struct tu {
      int requestingTU_FD;
      TU *connected_ringing_PeerTU;
      TU_STATE clientState; // current state of the client
+     sem_t unitSem;
  } TU;
 
  pthread_mutex_t modularMutex;
@@ -45,7 +46,7 @@ typedef struct tu {
 
 PBX *pbx_init() {
      // sem_init(&modularSemaphore, 0, 1);
-     pthread_mutex_init(&modularMutex, NULL);
+     pthread_mutex_init(&modularMutex, 0);
      pbx = malloc(sizeof(PBX));  // basically allocating max extensions
      return pbx;
  }
@@ -80,6 +81,7 @@ TU *pbx_register(PBX *pbx, int fd) {
     targetTU->clientExtension = fd;
     targetTU->clientFD = fd;
     targetTU->clientState = TU_ON_HOOK;
+    sem_init(&targetTU->unitSem, 0, 1);
 
     if (fd < 3) { free(targetTU); pthread_mutex_unlock(&modularMutex);return NULL; }
     debug("Registering....");
@@ -306,7 +308,7 @@ int tu_dial(TU *tu, int ext) {
 
 int tu_chat(TU *tu, char *msg) {
 
-    // pthread_mutex_lock(&modularMutex);
+    pthread_mutex_lock(&modularMutex);
     debug("Waiting P ==> CHATS");
 
     if (tu == NULL) { return -1; }
@@ -324,7 +326,7 @@ int tu_chat(TU *tu, char *msg) {
 
     // Print out current connection state
     writeStatetoTU(tu);
-    // pthread_mutex_unlock(&modularMutex);
+    pthread_mutex_unlock(&modularMutex);
     return 0;
 }
 
@@ -337,11 +339,14 @@ int tu_chat(TU *tu, char *msg) {
 
 void writeStatetoTU(TU *tu) {
 
+    sem_wait(&tu->unitSem);
+
     write(tu->clientFD, tu_state_names[tu->clientState], strlen(tu_state_names[tu->clientState])); // Writing String of Command to the FD
     // dprintf(tu->clientFD, "%s ", tu_state_names[tu->clientState]);
 
     if (tu->clientState == TU_CONNECTED) {
 
+        // dprintf(tu->clientFD, "%d", tu->requestingTU_FD);
         // dprintf(tu->clientFD, "%d", tu->requestingTU_FD);
 
         // TU *otherTU = tu->connected_ringing_PeerTU;
@@ -362,6 +367,7 @@ void writeStatetoTU(TU *tu) {
     write(tu->clientFD, "\n", 1); // Write a \n (new line) to file descriptor
     // dprintf(tu->clientFD, "\n");
     // return;
+    sem_post(&tu->unitSem);
 }
 
 /*
@@ -375,6 +381,8 @@ void writeStatetoFD(TU *tu, int fd) {
 
     // waitingP(&modularSemaphore);
 
+    sem_wait(&tu->unitSem);
+
     write(fd, tu_state_names[tu->clientState], strlen(tu_state_names[tu->clientState])); // Write "ON HOOK" to file descriptor
     if (tu->clientState == TU_ON_HOOK || tu->clientState == TU_CONNECTED) {
         char space[] = " "; write(fd, space, 1); // Write SPACE to file descriptor
@@ -383,6 +391,8 @@ void writeStatetoFD(TU *tu, int fd) {
         write(fd, intHolder, strlen(intHolder));
     }
     write(fd, "\n", 1); // Write a \n (new line) to file descriptor
+
+    sem_post(&tu->unitSem);
 
     // postingV(&modularSemaphore);
     return;
