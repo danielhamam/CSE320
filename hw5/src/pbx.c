@@ -48,6 +48,7 @@ PBX *pbx_init() {
      // sem_init(&modularSemaphore, 0, 1);
      pthread_mutex_init(&modularMutex, 0);
      pbx = malloc(sizeof(PBX));  // basically allocating max extensions
+     if (pbx == NULL) exit(EXIT_FAILURE);
      return pbx;
  }
 

@@ -32,6 +32,8 @@ void *pbx_client_service(void *arg) {
     TU *targetTU = pbx_register(pbx, communicateFD);
     FILE *communicateFilePtr = fdopen(communicateFD, "r"); // opened file descriptor
 
+    // char *messages[50];
+
     // Now, thread enters so-called "Service Loop"
     int infinite_loop = 1;
     while (infinite_loop) {
@@ -40,8 +42,6 @@ void *pbx_client_service(void *arg) {
         int processCheck = processRequest(receivedCommand, receivedRest, targetTU);
         if (processCheck == -1) continue;
         fflush(communicateFilePtr);
-        // free(readMsg_Command);
-        // free(readMsg_afterCommand);
     }
 
     pbx_unregister(pbx, targetTU);
@@ -98,18 +98,25 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
         *tempMessage = byte;
         tempMessage++;
     }
-    debug("The message is %s!", receivedMessage);
+    // debug("The message is %s!", receivedMessage);
     receivedMessage = realloc(receivedMessage, loopCount);
     return receivedMessage;
 }
 
 int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
 
-    if (strncmp(receivedCMD, "pickup", 6) == 0) { tu_pickup(targetTU); return 0; }
-    if (strncmp(receivedCMD, "hangup", 6) == 0) { tu_hangup(targetTU); return 0; }
+    int successful = 0;
+
+    if (strncmp(receivedCMD, "pickup", 6) == 0) { tu_pickup(targetTU); successful = 1; }
+    if (strncmp(receivedCMD, "hangup", 6) == 0) { tu_hangup(targetTU); successful = 1; }
     if (strncmp(receivedCMD, "dial", 4) == 0) {
-        if (received_afterCMD != NULL) tu_dial(targetTU, convertStr2Int(received_afterCMD));
-        return 0; }
-    if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); return 0; }
-    return -1;
+        if (received_afterCMD != NULL) { tu_dial(targetTU, convertStr2Int(received_afterCMD)); successful = 1; }}
+    if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); successful = 1; }
+
+    // free(receivedCMD);
+    // free(received_afterCMD);
+
+    if (successful == 1) return 0;
+    else return -1;
+
 }
