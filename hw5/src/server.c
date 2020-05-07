@@ -39,13 +39,13 @@ void *pbx_client_service(void *arg) {
     while (infinite_loop) {
         char *receivedCommand = readMsg_Command(communicateFilePtr);
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
-        int processCheck = processRequest(receivedCommand, receivedRest, targetTU);
-        if (processCheck == -1) continue;
+        processRequest(receivedCommand, receivedRest, targetTU);
         fflush(communicateFilePtr);
     }
 
     pbx_unregister(pbx, targetTU);
     debug("Unregistering");
+    fclose(communicateFilePtr);
     return NULL; // @return is NULL
 }
 
@@ -81,7 +81,10 @@ char *readMsg_Command(FILE *communicateFILE) {
 
 char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
-    if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) return " ";
+    if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) {
+        fgetc(communicateFILE); // get the \n
+        return NULL;
+    }
 
     char *receivedMessage = malloc(sizeof(char) * 300); // just to hold whatever message
 
@@ -99,6 +102,8 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
         tempMessage++;
     }
     // debug("The message is %s!", receivedMessage);
+    if (byte == '\r') fgetc(communicateFILE); // finish off with \n
+
     receivedMessage = realloc(receivedMessage, loopCount);
     return receivedMessage;
 }
@@ -113,10 +118,11 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
         if (received_afterCMD != NULL) { tu_dial(targetTU, convertStr2Int(received_afterCMD)); successful = 1; }}
     if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); successful = 1; }
 
-    // free(receivedCMD);
-    // free(received_afterCMD);
-
-    if (successful == 1) return 0;
+    if (successful == 1) {
+        free(receivedCMD);
+        if (received_afterCMD != NULL) free(received_afterCMD);
+        return 0;
+    }
     else return -1;
 
 }
