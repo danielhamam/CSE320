@@ -84,7 +84,7 @@ TU *pbx_register(PBX *pbx, int fd) {
     sem_init(&targetTU->unitSem, 0, 1);
 
     if (fd < 3) { free(targetTU); pthread_mutex_unlock(&modularMutex);return NULL; }
-    debug("Registering....");
+    // debug("Registering....");
     // Search for a free position in TU array
     int searchCount = 0;
     int placedTU = 0; // boolean value if palced TargetTU
@@ -95,7 +95,7 @@ TU *pbx_register(PBX *pbx, int fd) {
         searchCount++;
     }
     if (placedTU == 1) {
-        debug("Registered");
+        // debug("Registered");
         writeStatetoTU(targetTU);
         pthread_mutex_unlock(&modularMutex);
         return targetTU;
@@ -157,7 +157,7 @@ int tu_extension(TU *tu) {
 int tu_pickup(TU *tu) {
 
     pthread_mutex_lock(&modularMutex);
-    debug("Waiting P ==> PICKUP");
+    // debug("Waiting P ==> PICKUP");
 
     if (tu == NULL) { pthread_mutex_unlock(&modularMutex); return -1; }
 
@@ -191,7 +191,7 @@ int tu_hangup(TU *tu) {
 
     // waitingP(&modularSemaphore);
     pthread_mutex_lock(&modularMutex);
-    debug("Waiting P ==> HANGUP");
+    // debug("Waiting P ==> HANGUP");
 
     if (tu == NULL) { pthread_mutex_unlock(&modularMutex); return -1; }
 
@@ -240,10 +240,10 @@ int tu_dial(TU *tu, int ext) {
 
     // waitingP(&modularSemaphore);
     pthread_mutex_lock(&modularMutex);
-    debug("Waiting P ==> DIAL");
+    // debug("Waiting P ==> DIAL");
 
     if (tu == NULL) { pthread_mutex_unlock(&modularMutex); return -1; }
-    if (ext < 4) { debug("less than 0"); pthread_mutex_unlock(&modularMutex); return -1; }
+    if (ext < 4) { pthread_mutex_unlock(&modularMutex); return -1; }
 
     if (tu->clientState != TU_DIAL_TONE) {
         writeStatetoTU(tu);
@@ -310,7 +310,7 @@ int tu_dial(TU *tu, int ext) {
 int tu_chat(TU *tu, char *msg) {
 
     pthread_mutex_lock(&modularMutex);
-    debug("Waiting P ==> CHATS");
+    // debug("Waiting P ==> CHATS");
 
     if (tu == NULL) { return -1; }
 
@@ -348,17 +348,11 @@ int tu_chat(TU *tu, char *msg) {
 
 void writeStatetoTU(TU *tu) {
 
-    // sem_wait(&tu->unitSem);
-
+    sem_wait(&tu->unitSem);
     write(tu->clientFD, tu_state_names[tu->clientState], strlen(tu_state_names[tu->clientState])); // Writing String of Command to the FD
-    // dprintf(tu->clientFD, "%s ", tu_state_names[tu->clientState]);
 
     if (tu->clientState == TU_CONNECTED) {
 
-        // dprintf(tu->clientFD, "%d", tu->requestingTU_FD);
-        // dprintf(tu->clientFD, "%d", tu->requestingTU_FD);
-
-        // TU *otherTU = tu->connected_ringing_PeerTU;
         char space[] = " "; write(tu->clientFD, space, 1); // Write SPACE to file descriptor
         char intHolder[10] = "";  // Write in the INTEGER to file descriptor
         sprintf(intHolder, "%d", tu->requestingTU_FD);
@@ -366,17 +360,13 @@ void writeStatetoTU(TU *tu) {
     }
     else if (tu->clientState == TU_ON_HOOK) {
 
-        // dprintf(tu->clientFD, "%d", tu->clientFD);
-
         char space[] = " "; write(tu->clientFD, space, 1); // Write SPACE to file descriptor
         char intHolder[10] = "";  // Write in the INTEGER to file descriptor
         sprintf(intHolder, "%d", tu->clientFD);
         write(tu->clientFD, intHolder, strlen(intHolder));
     }
     write(tu->clientFD, "\n", 1); // Write a \n (new line) to file descriptor
-    // dprintf(tu->clientFD, "\n");
-    // return;
-    // sem_post(&tu->unitSem);
+    sem_post(&tu->unitSem);
 }
 
 /*
@@ -387,8 +377,6 @@ void writeStatetoTU(TU *tu) {
 */
 
 void writeStatetoFD(TU *tu, int fd) {
-
-    // waitingP(&modularSemaphore);
 
     sem_wait(&tu->unitSem);
 
@@ -402,7 +390,5 @@ void writeStatetoFD(TU *tu, int fd) {
     write(fd, "\n", 1); // Write a \n (new line) to file descriptor
 
     sem_post(&tu->unitSem);
-
-    // postingV(&modularSemaphore);
     return;
 }
