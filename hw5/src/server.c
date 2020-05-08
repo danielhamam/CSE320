@@ -40,7 +40,8 @@ void *pbx_client_service(void *arg) {
         char *receivedCommand = readMsg_Command(communicateFilePtr);
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
         processRequest(receivedCommand, receivedRest, targetTU);
-        fflush(communicateFilePtr);
+        // if (processCheck == -1) continue;
+        // fflush(communicateFilePtr);
     }
 
     pbx_unregister(pbx, targetTU);
@@ -81,10 +82,7 @@ char *readMsg_Command(FILE *communicateFILE) {
 
 char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
-    if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) {
-        fgetc(communicateFILE); // get the \n
-        return NULL;
-    }
+    if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) return NULL;
 
     char *receivedMessage = malloc(sizeof(char) * 300); // just to hold whatever message
 
@@ -119,8 +117,8 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
     if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); successful = 1; }
 
     if (successful == 1) {
-        free(receivedCMD);
-        if (received_afterCMD != NULL) free(received_afterCMD);
+        // free(receivedCMD);
+        // if (received_afterCMD != NULL) free(received_afterCMD);
         return 0;
     }
     else return -1;
