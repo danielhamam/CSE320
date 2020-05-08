@@ -17,6 +17,8 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE);
 int processRequest(char *receivedCMD, char *received_afterCMD, TU *target);
 int convertStr2Int(char *message);
 
+int endofmessage = 0;
+
 void *pbx_client_service(void *arg) {
 
     // Manipulating the File Descriptor
@@ -41,11 +43,12 @@ void *pbx_client_service(void *arg) {
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
         processRequest(receivedCommand, receivedRest, targetTU);
         // if (processCheck == -1) continue;
-        // fflush(communicateFilePtr);
+        fflush(communicateFilePtr);
+        endofmessage = 0;
     }
 
     pbx_unregister(pbx, targetTU);
-    debug("Unregistering");
+    // debug("Unregistering");
     fclose(communicateFilePtr);
     return NULL; // @return is NULL
 }
@@ -58,12 +61,13 @@ char *readMsg_Command(FILE *communicateFILE) {
 
     // Initialize variables for the loop:
     char *tempMessage = received_CMD;
-    int byte = 0;
+    unsigned int byte = 0;
     int loopCount = 0;
     // char emptyChar = ' '; // there would be a space between command and referenced message.
 
     while (byte != '\r' && byte != ' ') {
-        unsigned int byte = fgetc(communicateFILE);
+        byte = fgetc(communicateFILE);
+        // debug("BYTE : %c ", (char) byte);
         if (byte == '\n') continue;
         if (byte == '\r' || byte == ' ') break;
         if (byte == EOF) { exit(EXIT_FAILURE); }; // it's saying EOF before "\r\n".
@@ -72,9 +76,13 @@ char *readMsg_Command(FILE *communicateFILE) {
         // debug("Input: %c", byte);
         loopCount++;
     }
-    // if (byte == '\r') debug("RETURNED DONE");
-    *tempMessage = '\0';
-    received_CMD = realloc(received_CMD,loopCount + 1); // re-allocate to right size
+    if (byte == '\r') {
+        // debug("emptied");
+        fgetc(communicateFILE);
+        endofmessage = 1;
+    }
+    // *tempMessage = '\0';
+    received_CMD = realloc(received_CMD,loopCount); // re-allocate to right size
 
     // debug("The read command is: %s!", received_CMD);
     return received_CMD;
@@ -83,6 +91,7 @@ char *readMsg_Command(FILE *communicateFILE) {
 char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
     if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) return NULL;
+    if (endofmessage == 1) return NULL;
 
     char *receivedMessage = malloc(sizeof(char) * 300); // just to hold whatever message
 
@@ -91,15 +100,19 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
     char *tempMessage = receivedMessage;
 
     while (byte != '\r') {
-        unsigned int byte = fgetc(communicateFILE);
+        byte = fgetc(communicateFILE);
         if (byte == '\n' && loopCount == 0) { free(receivedMessage); return NULL; }
         if (byte == '\r' || byte == '\n') break;
         if (byte == EOF) exit(EXIT_FAILURE);
+        // debug("Adding %c to the string ", *tempMessage);
         loopCount++;
         *tempMessage = byte;
         tempMessage++;
     }
     // debug("The message is %s!", receivedMessage);
+    char *heremessage = receivedMessage;
+    heremessage++;
+    // debug("After char is: %c!", *heremessage);
     if (byte == '\r') fgetc(communicateFILE); // finish off with \n
 
     receivedMessage = realloc(receivedMessage, loopCount);
@@ -113,12 +126,16 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
     if (strncmp(receivedCMD, "pickup", 6) == 0) { tu_pickup(targetTU); successful = 1; }
     if (strncmp(receivedCMD, "hangup", 6) == 0) { tu_hangup(targetTU); successful = 1; }
     if (strncmp(receivedCMD, "dial", 4) == 0) {
-        if (received_afterCMD != NULL) { tu_dial(targetTU, convertStr2Int(received_afterCMD)); successful = 1; }}
+        if (received_afterCMD != NULL) {
+            int result = atoi(received_afterCMD);
+            tu_dial(targetTU, result);
+            // debug("THE NUMBER IS: %d!", result);
+            successful = 1; }}
     if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); successful = 1; }
 
     if (successful == 1) {
-        // free(receivedCMD);
-        // if (received_afterCMD != NULL) free(received_afterCMD);
+        free(receivedCMD);
+        if (received_afterCMD != NULL) free(received_afterCMD);
         return 0;
     }
     else return -1;

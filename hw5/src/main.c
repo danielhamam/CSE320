@@ -98,6 +98,6 @@ void terminate(int status) {
  */
 
 void handler_SIGHUP() {
-    debug("SIGHUP Handler Invoked");
+    // debug("SIGHUP Handler Invoked");
     terminate(0); // EXIT_SUCCESS == 0;
 }
