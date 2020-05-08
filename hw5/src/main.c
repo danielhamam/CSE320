@@ -33,19 +33,19 @@ int main(int argc, char* argv[]){
     while((flag = getopt(argc, argv, "p:")) != EOF) {
 
         switch(flag) {
-            case 'p':
+            case 'p': // this is the only required flag
                 portNumber = convertStr2Int(optarg++); // converts char to int
                 if (portNumber < 0) exit(EXIT_FAILURE);
                 break;
-            default:
+            default: // there are no other cases
                 exit(EXIT_FAILURE);
                 break;
         } // end of switch
     } // end of while loop
 // ----------------------------------------------------------------------------------------------
-    debug("Port number: %d ", portNumber);
+    // debug("Port number: %d ", portNumber);
     // Perform required initialization of the PBX module.
-    debug("Initializing PBX...");
+    // debug("Initializing PBX...");
     pbx = pbx_init();
 
 // ----------------------------------------------------------------------------------------------
@@ -67,9 +67,11 @@ int main(int argc, char* argv[]){
     int serverSocketFD, infinite_loop = 1;
     pthread_t threadID;
     struct sockaddr_storage addressClient;
-    socklen_t lengthClient = 0;
+    socklen_t lengthClient = 0; // was getting valgrind errors for not initializing
 
-    serverSocketFD =  open_listenfd(portNumber); // forms endpoint and returns file descriptor
+    // FOLLOWING LOGIC IS BASED OFF SLIDES!
+
+    serverSocketFD =  open_listenfd(portNumber); // forms endpoint and returns file descriptor (adopted from csapp.c)
     if (serverSocketFD < 0) exit(EXIT_FAILURE);
 
     // Infinite loop because terminates when SIGHUP called

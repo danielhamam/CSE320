@@ -242,7 +242,18 @@ int tu_dial(TU *tu, int ext) {
     // debug("Waiting P ==> DIAL");
 
     if (tu == NULL) { pthread_mutex_unlock(&modularMutex); return -1; }
-    if (ext < 4) { pthread_mutex_unlock(&modularMutex); return -1; }
+
+    if (ext == -1 && tu->clientState != TU_DIAL_TONE) {
+        writeStatetoTU(tu);
+        pthread_mutex_unlock(&modularMutex);
+        return -1;
+    }
+
+    if (ext < 4) {
+        // tu->clientState = TU_ERROR;
+        writeStatetoTU(tu);
+        pthread_mutex_unlock(&modularMutex);
+        return -1; }
 
     if (tu->clientState != TU_DIAL_TONE) {
         writeStatetoTU(tu);

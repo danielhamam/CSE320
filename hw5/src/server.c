@@ -16,6 +16,7 @@ char *readMsg_Command(FILE *communicateFilePtr);
 char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE);
 int processRequest(char *receivedCMD, char *received_afterCMD, TU *target);
 int convertStr2Int(char *message);
+int checkLetters(char *message);
 
 int *endofmessage;
 
@@ -48,7 +49,7 @@ void *pbx_client_service(void *arg) {
         char *receivedRest = readMsg_afterCommand(receivedCommand, communicateFilePtr);
         processRequest(receivedCommand, receivedRest, targetTU);
         // if (processCheck == -1) continue;
-        fflush(communicateFilePtr);
+        // fflush(communicateFilePtr);
         *endofmessage = 0;
     }
     fclose(communicateFilePtr);
@@ -133,8 +134,10 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
     if (strncmp(receivedCMD, "hangup", 6) == 0) { tu_hangup(targetTU); successful = 1; }
     if (strncmp(receivedCMD, "dial", 4) == 0) {
         if (received_afterCMD != NULL) {
-            int result = atoi(received_afterCMD);
-            tu_dial(targetTU, result);
+            int letterChecker = checkLetters(received_afterCMD);
+            int result = -1;
+            if (letterChecker == 1) result = atoi(received_afterCMD);
+            if (result >= 0) tu_dial(targetTU, result);
             // debug("THE NUMBER IS: %d!", result);
             successful = 1; }}
     if (strncmp(receivedCMD, "chat", 4) == 0) { tu_chat(targetTU, received_afterCMD); successful = 1; }
@@ -147,4 +150,21 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
     else {
         return -1;
     }
+}
+
+int checkLetters(char *message) {
+
+    char *tempPtr = message;
+    int isNumber = 1;
+
+    for (int i = 0; i < strlen(message); i ++) {
+        char ch = *tempPtr;
+        if (ch < '0' || ch > '9') {
+            isNumber = 0;
+            break;
+        }
+    }
+
+    return isNumber;
+
 }
