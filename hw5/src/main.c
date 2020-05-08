@@ -52,6 +52,8 @@ int main(int argc, char* argv[]){
     // Second: Set Signal Handler for "SIGHUP" --> cleanly terminate
     struct sigaction newFunctionality;
     newFunctionality.sa_handler = handler_SIGHUP; // jump to terminate as signal handler
+    newFunctionality.sa_flags = SA_RESTART;
+    sigemptyset(&newFunctionality.sa_mask);
     sigaction(SIGHUP, &newFunctionality, NULL); // newAction = current act, NULL = old act
 // ----------------------------------------------------------------------------------------------
 
@@ -65,7 +67,7 @@ int main(int argc, char* argv[]){
     int serverSocketFD, infinite_loop = 1;
     pthread_t threadID;
     struct sockaddr_storage addressClient;
-    socklen_t lengthClient;
+    socklen_t lengthClient = 0;
 
     serverSocketFD =  open_listenfd(portNumber); // forms endpoint and returns file descriptor
     if (serverSocketFD < 0) exit(EXIT_FAILURE);

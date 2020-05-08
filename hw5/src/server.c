@@ -17,14 +17,19 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE);
 int processRequest(char *receivedCMD, char *received_afterCMD, TU *target);
 int convertStr2Int(char *message);
 
-int endofmessage = 0;
+int *endofmessage;
 
 void *pbx_client_service(void *arg) {
+
+    endofmessage = malloc(sizeof(int));
+    *endofmessage = 0;
 
     // Manipulating the File Descriptor
     int *communicateFD_addr = (int *) arg; // convert argument to INT file descriptor
     int communicateFD = *communicateFD_addr;
     free(communicateFD_addr); // Memory held by FD freed (since we have it now)
+
+    signal(SIGPIPE, SIG_IGN); // Was receiving SIGPIPE in valgrind.
 
     // Detach thread so I don't need to reap
     int detachCheck = pthread_detach(pthread_self()); // pthread_self "Returns ID of calling thread"
@@ -44,12 +49,12 @@ void *pbx_client_service(void *arg) {
         processRequest(receivedCommand, receivedRest, targetTU);
         // if (processCheck == -1) continue;
         fflush(communicateFilePtr);
-        endofmessage = 0;
+        *endofmessage = 0;
     }
-
+    fclose(communicateFilePtr);
     pbx_unregister(pbx, targetTU);
     // debug("Unregistering");
-    fclose(communicateFilePtr);
+    free(endofmessage);
     return NULL; // @return is NULL
 }
 
@@ -79,10 +84,10 @@ char *readMsg_Command(FILE *communicateFILE) {
     if (byte == '\r') {
         // debug("emptied");
         fgetc(communicateFILE);
-        endofmessage = 1;
+        *endofmessage = 1;
     }
     // *tempMessage = '\0';
-    received_CMD = realloc(received_CMD,loopCount); // re-allocate to right size
+    received_CMD = realloc(received_CMD,loopCount + 1); // re-allocate to right size
 
     // debug("The read command is: %s!", received_CMD);
     return received_CMD;
@@ -91,7 +96,7 @@ char *readMsg_Command(FILE *communicateFILE) {
 char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
 
     if (strncmp(receivedCommand, "pickup", 6) == 0 || strncmp(receivedCommand, "hangup", 6) == 0 ) return NULL;
-    if (endofmessage == 1) return NULL;
+    if (*endofmessage == 1) return NULL;
 
     char *receivedMessage = malloc(sizeof(char) * 300); // just to hold whatever message
 
@@ -113,9 +118,10 @@ char *readMsg_afterCommand(char *receivedCommand, FILE *communicateFILE) {
     char *heremessage = receivedMessage;
     heremessage++;
     // debug("After char is: %c!", *heremessage);
+    *tempMessage = '\0';
     if (byte == '\r') fgetc(communicateFILE); // finish off with \n
 
-    receivedMessage = realloc(receivedMessage, loopCount);
+    receivedMessage = realloc(receivedMessage, loopCount + 1);
     return receivedMessage;
 }
 
@@ -138,6 +144,7 @@ int processRequest(char *receivedCMD, char *received_afterCMD, TU *targetTU) {
         if (received_afterCMD != NULL) free(received_afterCMD);
         return 0;
     }
-    else return -1;
-
+    else {
+        return -1;
+    }
 }

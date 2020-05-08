@@ -76,7 +76,7 @@ TU *pbx_register(PBX *pbx, int fd) {
     pthread_mutex_lock(&modularMutex);
 
     // Making a new TU with this FD
-    TU *targetTU = malloc(sizeof(TU *));
+    TU *targetTU = malloc(sizeof(TU));
     if (targetTU == NULL) { pthread_mutex_unlock(&modularMutex); return NULL; }
     targetTU->clientExtension = fd;
     targetTU->clientFD = fd;
@@ -351,14 +351,14 @@ void writeStatetoTU(TU *tu) {
 
     if (tu->clientState == TU_CONNECTED) {
 
-        char space[] = " "; write(tu->clientFD, space, 1); // Write SPACE to file descriptor
+        char space[] = " "; write(tu->clientFD, space, strlen(space)); // Write SPACE to file descriptor
         char intHolder[10] = "";  // Write in the INTEGER to file descriptor
         sprintf(intHolder, "%d", tu->requestingTU_FD);
         write(tu->clientFD, intHolder, strlen(intHolder));
     }
     else if (tu->clientState == TU_ON_HOOK) {
 
-        char space[] = " "; write(tu->clientFD, space, 1); // Write SPACE to file descriptor
+        char space[] = " "; write(tu->clientFD, space, strlen(space)); // Write SPACE to file descriptor
         char intHolder[10] = "";  // Write in the INTEGER to file descriptor
         sprintf(intHolder, "%d", tu->clientFD);
         write(tu->clientFD, intHolder, strlen(intHolder));
@@ -377,7 +377,7 @@ void writeStatetoFD(TU *tu, int fd) {
 
     write(fd, tu_state_names[tu->clientState], strlen(tu_state_names[tu->clientState])); // Write "ON HOOK" to file descriptor
     if (tu->clientState == TU_ON_HOOK || tu->clientState == TU_CONNECTED) {
-        char space[] = " "; write(fd, space, 1); // Write SPACE to file descriptor
+        char space[] = " "; write(fd, space, strlen(space)); // Write SPACE to file descriptor
         char intHolder[10] = "";  // Write in the INTEGER to file descriptor
         sprintf(intHolder, "%d", fd);
         write(fd, intHolder, strlen(intHolder));
